@@ -109,15 +109,24 @@ class OSMhandler(osmium.SimpleHandler):
             weight = haversine(lat1, lon1, lat2, lon2)
 
             self.edges.append((src, dst, highway, weight, one_way, speed_limit))
+            print(f"src: {src}, dst: {dst}, roadtype: {road_type}, weight: {weight}, one_way?: {one_way}, speed_limit: {speed_limit}")
 
             # add reverse edge if road is two way
             if not one_way:
                 self.edges.append((dst, src, road_type, weight, one_way, speed_limit))
 
+if __name__ == "__main__":
+    # if there are more variables then 3 cancel
+    if len(sys.argv) != 3:
+        print("usage: python scripts/import_osm.py <input.osm.pbf> <output.bin>")
+        sys.exit(1)
 
+    input_path = sys.argz[1]
+    output_path = sys.argz[2]
 
+    print("parsing osm data...")
+    handler = OSMhandler()
 
-    
-    
-h = OSMhandler()
-h.apply_file("data/raw/sud-260628.osm.pbf")
+    handler.apply_file(input_path, locations=True)
+
+    print(f"nodes: {len(handler.nodes)}, edges: {len(handler.edges)}")
