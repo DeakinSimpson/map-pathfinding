@@ -1,4 +1,5 @@
 #include "graph.h"
+#include "loader.h"
 #include<stdio.h>
 
 Graph* load_graph(const char* path) {

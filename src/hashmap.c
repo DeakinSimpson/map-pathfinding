@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 HashMap* hashmap_create(long long capacity) {
-    HashMap* map = malloc(capacity * sizeof(HashMap));
+    HashMap* map = malloc(sizeof(HashMap));
 
     if (map == NULL) {
         printf("Failed to allocate memory for HashMap");
@@ -59,7 +59,7 @@ long long hashmap_get(HashMap *map, long long key) {
     // check over each entry until the key matches
     while (entry != NULL) {
         if (entry->key == key) {
-            return entry->key;
+            return entry->value;
         }
 
         entry = entry->next;
@@ -70,6 +70,21 @@ long long hashmap_get(HashMap *map, long long key) {
 }
 
 void hashmap_free(HashMap *map) {
+    if (map == NULL) {
+        return;
+    }
+
+    // loop through all entries in a bucket and free them
+    for (long long i = 0; i < map->capacity; i++) {
+        HashMapEntry *entry = map->buckets[i];
+
+        while (entry != NULL) {
+            HashMapEntry *next = entry->next;
+            free(entry);
+            entry = next;
+        }
+    }
+
     free(map->buckets);
     free(map);
 }

@@ -133,7 +133,7 @@ def write_binary(handler, output_path):
 
         # write each edge
         for src, dst, road_type, weight, one_way, speed_limit in handler.edges:
-            f.write(struct.pack("qqdiii", src, dst, weight, road_type, one_way, speed_limit))
+            f.write(struct.pack("qqdiiii", src, dst, weight, road_type, 0, one_way, speed_limit))
 
 
 if __name__ == "__main__":
