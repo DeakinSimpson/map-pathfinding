@@ -122,14 +122,14 @@ def write_binary(handler, output_path):
         # write q type (long long) of number of nodes
         f.write(struct.pack("q", len(handler.nodes)))
 
+        # write number of edges
+        f.write(struct.pack("q", len(handler.edges)))
+
         # write each node 
         # write node id ad long long (q)
         # write lat and lon as double (d)
         for node_id, (lat, lon) in handler.nodes.items():
             f.write(struct.pack("qdd", node_id, lat, lon))
-
-        # write number of edges
-        f.write(struct.pack("q", len(handler.edges)))
 
         # write each edge
         for src, dst, road_type, weight, one_way, speed_limit in handler.edges:
