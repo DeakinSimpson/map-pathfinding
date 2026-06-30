@@ -78,6 +78,12 @@ HashMap* hashmap_create_index_from_graph(Graph *g) {
     // multiplying by 2 keeps hashmap half full to reduce collisions, can change this later
     HashMap *map = hashmap_create(g->node_count * 2);
 
+    if (map == NULL) {
+        printf("failed to generate hashmap");
+        hashmap_free(map);
+        return NULL;
+    }
+
     for (long long i = 0; i < g->node_count; i++){
         hashmap_insert(map, g->nodes[i].id, i);
     }
