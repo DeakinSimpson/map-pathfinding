@@ -1,0 +1,51 @@
+#ifndef GRAPH_H
+#define GRAPH_H
+
+// an enum storing all the roadtypes possible for osm
+enum RoadType {
+    Motorway,
+    MotorwayLink,
+    Trunk,
+    TrunkLink,
+    Primary,
+    PrimaryLink,
+    Secondary,
+    SecondaryLink,
+    Tertiary,
+    TertiaryLink,
+    Unclassified,
+    Residential,
+    LivingStreet,
+    Service
+};
+
+// define the Node structure
+typedef struct {
+    long long id;
+    double lat;
+    double lon;
+} Node;
+
+// define the Edge structure
+typedef struct {
+    long long src;
+    long long dst;
+    double weight;
+    enum RoadType road_type;
+    int one_way;
+    int speed_limit;
+} Edge;
+
+// define the Graph stucture, containing all Nodes and Edges
+typedef struct {
+    Node* nodes;
+    Edge* edges;
+    long long node_count;
+    long long edge_count;
+} Graph;
+
+// define functions for graph_c
+Graph* graph_create(long long node_capacity, long long edge_capacity);
+void graph_free(Graph* g);
+
+#endif
