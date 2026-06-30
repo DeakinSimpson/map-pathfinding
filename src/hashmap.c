@@ -1,0 +1,54 @@
+#include "hashmap.h"
+#include <stdlib.h>
+
+HashMap* hashmap_create(long long capacity) {
+    HashMap* map = malloc(capacity * sizeof(HashMap));
+
+    map->buckets = calloc(capacity, sizeof(HashMapEntry*));
+    map->capacity = capacity;
+    map->size = 0;
+
+    return map;
+}
+
+void hashmap_insert(HashMap *map, long long key, long long value) {
+    // hash the key into an index
+    long long index = key % map->capacity;
+
+    // create a new entry
+    HashMapEntry *entry = malloc(sizeof(HashMapEntry));
+    entry->key = key;
+    entry->value = value;
+
+    // insert at the front of the linked list for the bucket
+    entry->next = map->buckets[index];
+    map->buckets[index] = entry;
+
+    // increase the size of the HashMap
+    map->size += 1;
+}
+
+long long hashmap_get(HashMap *map, long long key) {
+    // get the index from the key
+    long long index = key % map->capacity;
+
+    // find the bucket that is associated with the index
+    HashMapEntry *entry = map->buckets[index];
+
+    // check over each entry until the key matches
+    while (entry != NULL) {
+        if (entry->key == key) {
+            return entry->key;
+        }
+
+        entry = entry->next;
+    }
+
+    // return -1 if not found
+    return -1;
+}
+
+void hashmap_free(HashMap *map) {
+    free(map->buckets);
+    free(map);
+}
