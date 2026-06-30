@@ -20,7 +20,10 @@ int main(int argc, char* argv[]) {
 
     hashmap_create(g->node_count);
 
-    printf("TEMPORARY ---- %lld, %lld", src, dst);
+    HashMap* map = hashmap_create_index_from_graph(g);
+
+    printf("TEMPORARY ---- %lld, %lld\n", src, dst);
+    printf("%lld\n", map->buckets[1]->key);
 
     graph_free(g);
     return 0;

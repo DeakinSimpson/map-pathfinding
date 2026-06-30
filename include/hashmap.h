@@ -1,6 +1,8 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
 
+#include "graph.h"
+
 typedef struct HashMapEntry {
     long long key;              // osm id
     long long value;            // array index
@@ -17,5 +19,6 @@ HashMap* hashmap_create(long long capacity);
 void hashmap_insert(HashMap *map, long long key, long long value);
 long long hashmap_get(HashMap *map, long long key);
 void hashmap_free(HashMap *map);
+HashMap* hashmap_create_index_from_graph(Graph *g);
 
 #endif
