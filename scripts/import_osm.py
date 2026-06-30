@@ -108,12 +108,33 @@ class OSMhandler(osmium.SimpleHandler):
             # calculate real distance between the two nodes in kms
             weight = haversine(lat1, lon1, lat2, lon2)
 
-            self.edges.append((src, dst, highway, weight, one_way, speed_limit))
-            print(f"src: {src}, dst: {dst}, roadtype: {road_type}, weight: {weight}, one_way?: {one_way}, speed_limit: {speed_limit}")
+            self.edges.append((src, dst, road_type, weight, one_way, speed_limit))
 
             # add reverse edge if road is two way
             if not one_way:
                 self.edges.append((dst, src, road_type, weight, one_way, speed_limit))
+
+def write_binary(handler, output_path):
+    # open output path with wb (write binary)
+    with open(output_path, "wb") as f:
+        # writes to f
+        # struct.pack converts to bytes
+        # write q type (long long) of number of nodes
+        f.write(struct.pack("q", len(handler.nodes)))
+
+        # write each node 
+        # write node id ad long long (q)
+        # write lat and lon as double (d)
+        for node_id, (lat, lon) in handler.nodes.items():
+            f.write(struct.pack("qdd", node_id, lat, lon))
+
+        # write number of edges
+        f.write(struct.pack("q", len(handler.edges)))
+
+        # write each edge
+        for src, dst, road_type, weight, one_way, speed_limit in handler.edges:
+            f.write(struct.pack("qqdiii", src, dst, weight, road_type, one_way, speed_limit))
+
 
 if __name__ == "__main__":
     # if there are more variables then 3 cancel
@@ -121,8 +142,8 @@ if __name__ == "__main__":
         print("usage: python scripts/import_osm.py <input.osm.pbf> <output.bin>")
         sys.exit(1)
 
-    input_path = sys.argz[1]
-    output_path = sys.argz[2]
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
 
     print("parsing osm data...")
     handler = OSMhandler()
@@ -130,3 +151,7 @@ if __name__ == "__main__":
     handler.apply_file(input_path, locations=True)
 
     print(f"nodes: {len(handler.nodes)}, edges: {len(handler.edges)}")
+
+    print("writing to binary")
+    write_binary(handler, output_path)
+    print("done")
