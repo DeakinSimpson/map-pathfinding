@@ -1,10 +1,24 @@
 #include "hashmap.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 HashMap* hashmap_create(long long capacity) {
     HashMap* map = malloc(capacity * sizeof(HashMap));
 
+    if (map == NULL) {
+        printf("Failed to allocate memory for HashMap");
+        hashmap_free(map);
+        return NULL;
+    }
+
     map->buckets = calloc(capacity, sizeof(HashMapEntry*));
+
+    if (map->buckets == NULL) {
+        printf("Failed to allocate memory for map->buckets");
+        hashmap_free(map);
+        return NULL;
+    }
+
     map->capacity = capacity;
     map->size = 0;
 
@@ -17,6 +31,13 @@ void hashmap_insert(HashMap *map, long long key, long long value) {
 
     // create a new entry
     HashMapEntry *entry = malloc(sizeof(HashMapEntry));
+    
+    if (entry == NULL) {
+        printf("Failed to allocate memory for HashMapEntry");
+        hashmap_free(map);
+        return;
+    }
+
     entry->key = key;
     entry->value = value;
 
