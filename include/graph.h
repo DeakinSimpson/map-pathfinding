@@ -47,5 +47,6 @@ typedef struct {
 // define functions for graph_c
 Graph* graph_create(long long node_capacity, long long edge_capacity);
 void graph_free(Graph* g);
+Graph* graph_load(const char* path);
 
 #endif

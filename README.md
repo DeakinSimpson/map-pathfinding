@@ -7,6 +7,9 @@ this will convert the OSM.PBF into a binary to be used for the c program, this i
 to run this use:
     "python scripts/import_osm.py <input.osm.pbf> <output.bin>"
 
+to run c:
+    ./build/pathfinder.exe data/bin/jamaica.bin 102185 35285
+
 [Dependancies]
     - make
     - osmium
