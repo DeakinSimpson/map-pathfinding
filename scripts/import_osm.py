@@ -48,20 +48,35 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-# OSMIUM runs this for every single node 
-class OSMhandler(osmium.SimpleHandler):
-    # initialise the handler
+# gets all the ways that are roads
+class PassOneHandler(osmium.SimpleHandler):
     def __init__(self):
         super().__init__()
+        self.road_node_ids = set()
+
+    def way(self, w):
+        if w.tags.get("highway") not in ROAD_TYPES:
+            return
+        for n in w.nodes:
+            self.road_node_ids.add(n.ref)
+
+# gets all the nodes and ways that are a part of roads
+class OSMhandler(osmium.SimpleHandler):
+    # initialise the handler
+    def __init__(self, road_node_ids):
+        super().__init__()
+        self.road_node_ids = road_node_ids
 
         # initialise nodes and edges for this object
         self.nodes = {}
         self.edges = []
-    
+
     # creates a node for each datapoint, where its location in the array is its ID
     # stores as a tuple of lat and lon
+    # only stores nodes that are referenced by road ways
     def node(self, n):
-        self.nodes[n.id] = (n.location.lat, n.location.lon)
+        if n.id in self.road_node_ids:
+            self.nodes[n.id] = (n.location.lat, n.location.lon)
 
     def way(self, w):
         # all roads are called highways
@@ -69,10 +84,10 @@ class OSMhandler(osmium.SimpleHandler):
 
         if highway not in ROAD_TYPES:
             return
-        
+
         # convert the road type string to its matching integer from the C enum, if no type set to 13 (service)
         road_type = ROAD_TYPE_MAP.get(highway, 13)
-        
+
         # set boolean for one way
         one_way = 1 if w.tags.get("oneway") == "yes" else 0
 
@@ -92,7 +107,7 @@ class OSMhandler(osmium.SimpleHandler):
         node_ids = [n.ref for n in w.nodes]
 
         # loop through consecutive pairs of nodes to create edges
-        # for example: nodes [A, B, C] creates edges A->B and B->C 
+        # for example: nodes [A, B, C] creates edges A->B and B->C
         for i in range(len(node_ids) - 1):
             src = node_ids[i]
             dst = node_ids[i + 1]
@@ -100,7 +115,7 @@ class OSMhandler(osmium.SimpleHandler):
             # checks if the src and dst are in the nodes
             if src not in self.nodes or dst not in self.nodes:
                 continue
-            
+
             # gets the lat and lon from the src and dst node in the nodes list
             lat1, lon1 = self.nodes[src]
             lat2, lon2 = self.nodes[dst]
@@ -145,11 +160,14 @@ if __name__ == "__main__":
     input_path = sys.argv[1]
     output_path = sys.argv[2]
 
-    print("parsing osm data...")
-    handler = OSMhandler()
+    print("pass 1: collecting road node ids...")
+    pass1 = PassOneHandler()
+    pass1.apply_file(input_path)
+    print(f"road nodes found: {len(pass1.road_node_ids)}")
 
+    print("pass 2: parsing osm data...")
+    handler = OSMhandler(pass1.road_node_ids)
     handler.apply_file(input_path, locations=True)
-
     print(f"nodes: {len(handler.nodes)}, edges: {len(handler.edges)}")
 
     print("writing to binary")

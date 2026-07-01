@@ -44,9 +44,19 @@ typedef struct {
     long long edge_count;
 } Graph;
 
+typedef struct {
+    double lat;
+    double lon;
+} Coordinate;
+
+#include "adjacency.h"
+
 // define functions for graph_c
 Graph* graph_create(long long node_capacity, long long edge_capacity);
 void graph_free(Graph* g);
 Graph* graph_load(const char* path);
+double to_rad(double deg);
+double haversine(Coordinate coord1, Coordinate coord2);
+long long graph_nearest_node(Graph *g, Coordinate coord, AdjList *adj);
 
 #endif

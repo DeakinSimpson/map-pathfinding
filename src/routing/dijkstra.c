@@ -11,7 +11,7 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
     long long src_index = hashmap_get(map, src_id);
 
     if (src_index == -1) {
-        printf("failed to get index for src");
+        printf("failed to get index for src\n");
         return NULL;
     }
     printf("src_index: %lld, edge count: %lld\n", src_index, adj[src_index].count);
@@ -23,6 +23,8 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
         printf("failed to get index for dst");
         return NULL;
     }
+
+    printf("dst_index: %lld, edge count: %lld\n", dst_index, adj[dst_index].count);
 
     // allocate dist array (size node_count), set all to DBL_MAX
     double *dist = malloc(g->node_count * sizeof(double));
@@ -114,7 +116,7 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
     long long cur_index = dst_index;
     long long i = 0;    
     while (cur_index != -1) {
-        printf("index = %lld\n", cur_index);
+        // printf("index = %lld\n", cur_index);
         path[i] = cur_index;
         cur_index = prev[cur_index];
         i++;
