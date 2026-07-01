@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <float.h>
+#include <time.h>
 
 AdjList* adjlist_create(Graph *g, HashMap *map) {
     // allocate an adjacency list per node
@@ -57,6 +58,8 @@ void adjlist_free(AdjList *adj, long long node_count) {
 }
 
 long long graph_nearest_node(Graph *g, Coordinate coord, AdjList *adj) {
+    clock_t t = clock();
+    
     // define variables
     long long best = 0;
     double best_dist = DBL_MAX;
@@ -76,5 +79,8 @@ long long graph_nearest_node(Graph *g, Coordinate coord, AdjList *adj) {
         }
     }
 
+    t = clock() - t;
+    printf("time taken to find node: %lld, %fs\n", best, (double)t / CLOCKS_PER_SEC);
+    
     return best;
 }
