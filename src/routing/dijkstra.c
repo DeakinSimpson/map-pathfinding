@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <float.h>      // used for DBL_MAX
+#include <time.h>
 #include "dijkstra.h"
 #include "hashmap.h"
 #include "graph.h"
 #include "heap.h"
 
-long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id) {
+ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id) {
+    clock_t t = clock();
     // get source index from node id
     long long src_index = hashmap_get(map, src_id);
 
@@ -14,7 +16,6 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
         printf("failed to get index for src\n");
         return NULL;
     }
-    printf("src_index: %lld, edge count: %lld\n", src_index, adj[src_index].count);
 
     // get destination index from node id
     long long dst_index = hashmap_get(map, dst_id);
@@ -24,14 +25,13 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
         return NULL;
     }
 
-    printf("dst_index: %lld, edge count: %lld\n", dst_index, adj[dst_index].count);
-
     // allocate dist array (size node_count), set all to DBL_MAX
     double *dist = malloc(g->node_count * sizeof(double));
 
     if (dist == NULL) {
         printf("failed to allocate memory for dist");
         return NULL;
+        free(dist);
     }
 
     // allocate prev array (size node_count), set all to -1
@@ -40,9 +40,9 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
     if (prev == NULL) {
         printf("failed to allocate memory for prev");
         return NULL;
+        free(prev);
+        free(dist);
     }
-
-    printf("%lld\n", adj->capacity);
 
     // allocate visited array (size node_count), set all to 0
     long long* visited = malloc(g->node_count * sizeof(long long));
@@ -50,17 +50,33 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
     if (visited == NULL) {
         printf("failed to allocate memory for visited");
         return NULL;
+        free(prev);
+        free(dist);
+        free(visited);
     }
+
+    double *km_dist = malloc(g->node_count * sizeof(double));
+
+    if (km_dist == NULL) {
+        printf("failed to allocate memory for km_dist");
+        return NULL;
+        free(prev);
+        free(dist);
+        free(visited);
+    }
+
 
     // setting arrays to their specified values
     for (long long i = 0; i < g->node_count; i++) {
         dist[i] = DBL_MAX;  // sets the distance to DBL_MAX (infinite in theory)
+        km_dist[i] = DBL_MAX;
         prev[i] = -1;       // sets all nodes prev node to -1, not traversed
         visited[i] = 0;     // sets all visisted nodes to 0 (false)
     }
 
     // set dist[src_index] = 0
     dist[src_index] = 0;
+    km_dist[src_index] = 0;
 
     // create heap and push src with distance 0
     MinHeap *heap = createHeap(1024);
@@ -68,6 +84,10 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
     if (heap == NULL) {
         printf("failed to create heap");
         return NULL;
+        free(heap);
+        free(prev);
+        free(dist);
+        free(visited);
     }
 
     push(heap, 0, src_index);
@@ -100,34 +120,61 @@ long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long
             }
 
             // calculate alternative distance = dist[u] + edge weight
-            double alt = dist[u] + neighbors->edges[i].weight;
+            double speed_ms = neighbors->edges[i].speed_limit / 3.6;
+            double time = neighbors->edges[i].weight / speed_ms;
+            double alt = dist[u] + time;
 
             // if alternative < dist[v]:
             if (alt < dist[v]) {
                 dist[v] = alt;
                 prev[v] = u;
+                km_dist[v] = km_dist[u] + neighbors->edges[i].weight;
                 push(heap, alt, v);
             }
         }
     }
 
+    if (dist[dst_index] == DBL_MAX) {
+        printf("no path found between src and dst\n");
+        free(heap);
+        free(prev);
+        free(dist);
+        free(visited);
+    }
+
     // reconstruct path by walking prev[] from dst back to src
     long long *path = malloc(g->node_count * sizeof(long long));
     long long cur_index = dst_index;
-    long long i = 0;    
+    long long i = 0;
+
     while (cur_index != -1) {
-        // printf("index = %lld\n", cur_index);
         path[i] = cur_index;
         cur_index = prev[cur_index];
         i++;
     }
-    printf("final index = %lld\n", cur_index);
+
+    // reverse path so it goes from src to dst
+    for (long long l = 0, r = i - 1; l < r; l++, r--) {
+        long long tmp = path[l];
+        path[l] = path[r];
+        path[r] = tmp;
+    }
+    path = realloc(path, (i + 1) * sizeof(long long));
+
+    // return path
+    t = clock() - t;
+
+    ResultPath *result = malloc(sizeof(ResultPath));
+    result->path_inx = path;
+    result->time_in_seconds = dist[dst_index];
+    result->distance_in_metres = km_dist[dst_index];
+    result->load_time_in_seconds = ((double)t / CLOCKS_PER_SEC);
 
     // free dist, visited, heap
     free(heap);
+    free(prev);
     free(dist);
     free(visited);
 
-    // return path
-    return path;
+    return result;
 }

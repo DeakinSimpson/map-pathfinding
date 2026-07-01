@@ -2,7 +2,6 @@
 #include "adjacency.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <float.h>
 #include <math.h>
 
 /*
@@ -95,25 +94,7 @@ double haversine(Coordinate coord1, Coordinate coord2) {
     return EARTH_RADIUS_KM * 2 * atan2(sqrt(a), sqrt(1-a));
 }
 
-long long graph_nearest_node(Graph *g, Coordinate coord, AdjList *adj) {
-    // define variables
-    long long best = 0;
-    double best_dist = DBL_MAX;
-
-    // loop through all nodes
-    for (long long i = 0; i < g->node_count; i++) {
-        Coordinate cur_coord = {g->nodes[i].lat, g->nodes[i].lon};
-        // iff current distance is closer then best, make current best
-        if (adj[i].count == 0) {
-            continue;
-        }
-        
-        double d = haversine(coord, cur_coord);
-        if (d < best_dist) {
-            best_dist = d;
-            best = i;
-        }
-    }
-
-    return best;
+void result_path_free(ResultPath *rp) {
+    free(rp->path_inx);
+    free(rp);
 }

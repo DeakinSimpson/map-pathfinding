@@ -11,40 +11,33 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    printf("sizeof Node: %zu\n", sizeof(Node));
-    printf("sizeof Edge: %zu\n", sizeof(Edge));
+    printf("Pathfinder Starting...\n");
 
     const char* path = argv[1];
     // long long src = atoll(argv[2]);
     // long long dst = atoll(argv[3]);
 
-    printf("loading graph...\n");
     Graph* g = graph_load(path);
-    printf("loaded - node_count: %lld, edge_count: %lld\n", g->node_count, g->edge_count);
-
-    printf("starting to create hash map\n");
     HashMap* map = hashmap_create_index_from_graph(g);
-    printf("hashmap created\n");
-
     AdjList *adj = adjlist_create(g, map);
-    printf("adj created\n");
 
-    printf("starting to get coordinates...\n");
-    Coordinate src_coord = {18.02566288645604, -76.83388113677778};
-    Coordinate dst_coord = {18.495506372876587, -77.91339315216436};
+    Coordinate src_coord = {45.47739253394642, 12.223124034279873};
+    Coordinate dst_coord = {45.546369611049755, 11.54529729703707};
 
     long long src_index = graph_nearest_node(g, src_coord, adj);
     long long dst_index = graph_nearest_node(g, dst_coord, adj);
-    printf("src: %lld, dst: %lld\n", src_index, dst_index);
 
-    long long *dpath = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
-    if (dpath == NULL) {
-        printf("dpath created ... NULL\n");
+    ResultPath *rp = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
+    if (rp == NULL) {
+        printf("dFailed to find path\n");
+    } else {
+        printf("travel time: %f minutes\ndistance travelled: %f kms\ntime to load: %f seconds\n", (rp->time_in_seconds / 60), (rp->distance_in_metres / 1000), rp->load_time_in_seconds);
     }
     
     adjlist_free(adj, g->node_count);
     hashmap_free(map);
     graph_free(g);
-    printf("freed\n");
+
+    printf("Terminating Program...\n");
     return 0;
 }

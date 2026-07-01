@@ -5,6 +5,6 @@
 #include "adjacency.h"
 #include "hashmap.h"
 
-long long* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id);
+ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id);
 
 #endif

@@ -1,6 +1,7 @@
 #include "adjacency.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <float.h>
 
 AdjList* adjlist_create(Graph *g, HashMap *map) {
     // allocate an adjacency list per node
@@ -39,6 +40,8 @@ AdjList* adjlist_create(Graph *g, HashMap *map) {
         // add the edge
         list->edges[list->count].dst_index = hashmap_get(map, e->dst);
         list->edges[list->count].weight = e->weight;
+        list->edges[list->count].speed_limit = e->speed_limit;
+        list->edges[list->count].road_type = e->road_type;
         list->count += 1;
     }
 
@@ -51,4 +54,27 @@ void adjlist_free(AdjList *adj, long long node_count) {
     }
 
     free(adj);
+}
+
+long long graph_nearest_node(Graph *g, Coordinate coord, AdjList *adj) {
+    // define variables
+    long long best = 0;
+    double best_dist = DBL_MAX;
+
+    // loop through all nodes
+    for (long long i = 0; i < g->node_count; i++) {
+        Coordinate cur_coord = {g->nodes[i].lat, g->nodes[i].lon};
+        // iff current distance is closer then best, make current best
+        if (adj[i].count == 0) {
+            continue;
+        }
+        
+        double d = haversine(coord, cur_coord);
+        if (d < best_dist) {
+            best_dist = d;
+            best = i;
+        }
+    }
+
+    return best;
 }

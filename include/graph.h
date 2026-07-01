@@ -49,6 +49,13 @@ typedef struct {
     double lon;
 } Coordinate;
 
+typedef struct {
+    long long *path_inx;
+    double time_in_seconds;
+    double distance_in_metres;
+    double load_time_in_seconds;
+} ResultPath;
+
 #include "adjacency.h"
 
 // define functions for graph_c
@@ -57,6 +64,6 @@ void graph_free(Graph* g);
 Graph* graph_load(const char* path);
 double to_rad(double deg);
 double haversine(Coordinate coord1, Coordinate coord2);
-long long graph_nearest_node(Graph *g, Coordinate coord, AdjList *adj);
+void result_path_free(ResultPath *rp);
 
 #endif
