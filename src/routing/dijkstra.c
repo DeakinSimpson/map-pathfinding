@@ -30,8 +30,10 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
 
     if (dist == NULL) {
         printf("failed to allocate memory for dist");
-        return NULL;
+
         free(dist);
+
+        return NULL;
     }
 
     // allocate prev array (size node_count), set all to -1
@@ -39,9 +41,11 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
 
     if (prev == NULL) {
         printf("failed to allocate memory for prev");
-        return NULL;
+
         free(prev);
         free(dist);
+
+        return NULL;
     }
 
     // allocate visited array (size node_count), set all to 0
@@ -49,20 +53,24 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
 
     if (visited == NULL) {
         printf("failed to allocate memory for visited");
-        return NULL;
+
         free(prev);
         free(dist);
         free(visited);
+
+        return NULL;
     }
 
     double *km_dist = malloc(g->node_count * sizeof(double));
 
     if (km_dist == NULL) {
         printf("failed to allocate memory for km_dist");
-        return NULL;
+
         free(prev);
         free(dist);
         free(visited);
+
+        return NULL;
     }
 
 
@@ -83,11 +91,13 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
 
     if (heap == NULL) {
         printf("failed to create heap");
-        return NULL;
+        
         free(heap);
         free(prev);
         free(dist);
-        free(visited);
+        free(visited);        
+
+        return NULL;
     }
 
     push(heap, 0, src_index);
@@ -106,7 +116,10 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
         // mark visited[u] = 1
         visited[u] = 1;
 
-        //! if u == dst_index break early (POSSIBLY IMPLEMENT LATER)
+        // if u == dst_index break early 
+        if (u == dst_index) {
+            break;
+        }
 
         AdjList *neighbors = &adj[u];
         // loop through all neighbours of u in adj[u]:
@@ -136,10 +149,13 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
 
     if (dist[dst_index] == DBL_MAX) {
         printf("no path found between src and dst\n");
+
         free(heap);
         free(prev);
         free(dist);
         free(visited);
+        
+        return NULL;
     }
 
     // reconstruct path by walking prev[] from dst back to src
@@ -171,7 +187,7 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
     result->load_time_in_seconds = ((double)t / CLOCKS_PER_SEC);
 
     // free dist, visited, heap
-    free(heap);
+    freeHeap(heap);
     free(prev);
     free(dist);
     free(visited);
