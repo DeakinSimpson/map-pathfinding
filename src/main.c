@@ -4,6 +4,7 @@
 #include "hashmap.h"
 #include "adjacency.h"
 #include "dijkstra.h"
+#include "rtree.h"
 
 int main(int argc, char* argv[]) {
     // initialise terminal variables
