@@ -25,11 +25,8 @@ int main(int argc, char* argv[]) {
     AdjList *adj = adjlist_create(g, map);
     RTree *tree = rtree_build(g);
 
-    long long src_index = graph_nearest_node(g, src_coord, adj);
-    long long dst_index = graph_nearest_node(g, dst_coord, adj);
-
-    long long src_index_new = rtree_nearest(tree, src_coord, g, adj);
-    long long dst_index_new = rtree_nearest(tree, dst_coord, g, adj);
+    long long src_index = rtree_nearest(tree, src_coord, g, adj);
+    long long dst_index = rtree_nearest(tree, dst_coord, g, adj);
 
     // run algorithms
     ResultPath *dijkstra_rp = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
@@ -39,8 +36,6 @@ int main(int argc, char* argv[]) {
         printf("travel time: %f minutes\ndistance travelled: %f kms\ntime to load: %f seconds\n", (dijkstra_rp->time_in_seconds / 60), (dijkstra_rp->distance_in_metres / 1000), dijkstra_rp->load_time_in_seconds);
     }
 
-    
-    
     // freeing variables
     adjlist_free(adj, g->node_count);
     hashmap_free(map);
