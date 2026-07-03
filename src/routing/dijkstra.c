@@ -92,7 +92,7 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
     if (heap == NULL) {
         printf("failed to create heap");
         
-        free(heap);
+        freeHeap(heap);
         free(prev);
         free(dist);
         free(visited);        
@@ -150,7 +150,7 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
     if (dist[dst_index] == DBL_MAX) {
         printf("no path found between src and dst\n");
 
-        free(heap);
+        freeHeap(heap);
         free(prev);
         free(dist);
         free(visited);

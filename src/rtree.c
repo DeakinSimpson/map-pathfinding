@@ -2,6 +2,8 @@
 #include "graph.h"
 #include "stdlib.h"
 #include "stdio.h"
+#include "float.h"
+#include <math.h>
 
 /*
 merges two halves back into one
@@ -109,42 +111,190 @@ void merge_sort(long long *indicies, long long left, long long right, Graph *g, 
     merge(indicies, left, mid, right, g, sort_by_lon);
 }
 
-// RTree* rtree_build(Graph *g) {
-//     /*
-//         --- step 1 ---
-//         sory all nodes by longitude
-//         [A, B, C, D, E, F, G, H, I]
-//     */
+/*
+gets the MBR for a node in a given graph
+*/
+void compute_mbr(RTreeNode *node, Graph *g) {
+    node->mbr.min_lat = DBL_MAX;
+    node->mbr.max_lat = -DBL_MAX;
+    node->mbr.min_lon = DBL_MAX;
+    node->mbr.max_lon = -DBL_MAX;
 
-//     /*
-//         --- step 2 ---
-//         split into column based on MAX_CHILDREN
-//         [A, B, C] [D, E, F] [G, H, I]
-//     */
+    if (node->is_leaf) {
+        for (int i = 0; i < node->children_count; i++) {
+            double lat = g->nodes[node->entries[i]].lat;
+            double lon = g->nodes[node->entries[i]].lon;
 
-//     /*
-//         --- step 3 ---
-//         within each longitude slice, sory by latitude
-//         [A, B, C] sorted south to north
-//     */
+            if (lat < node->mbr.min_lat) node->mbr.min_lat = lat;
+            if (lat > node->mbr.max_lat) node->mbr.max_lat = lat;
+            if (lon < node->mbr.min_lon) node->mbr.min_lon = lon;
+            if (lon > node->mbr.max_lon) node->mbr.max_lon = lon;            
+        }
+    } else {
+        for (int i = 0; i < node->children_count; i++) {
+            MinimumBoundingRectangle *c = &node->children[i]->mbr;
 
-//     /*
-//         --- steo 4 ---
-//         group every MAX_CHILDREN nodes into leaves
+            if (c->min_lat < node->mbr.min_lat) node->mbr.min_lat = c->min_lat;
+            if (c->max_lat > node->mbr.max_lat) node->mbr.max_lat = c->max_lat;
+            if (c->min_lon < node->mbr.min_lon) node->mbr.min_lon = c->min_lon;
+            if (c->max_lon > node->mbr.max_lon) node->mbr.max_lon = c->max_lon;
+        }
+    }
+}
 
-//         compute minimum bounding range
-//     */
+RTree* rtree_build(Graph *g) {
+    /*
+        --- step 1 ---
+        sory all nodes by longitude
+        [A, B, C, D, E, F, G, H, I]
+    */
 
-//     /*
-//         --- step 5 ---
+    // create the array indicies, which is the index to the graph g
+    long long *indicies = malloc(g->node_count * sizeof(long long));
 
-//         group leaves into internal nodes
+    if (indicies == NULL) {
+        printf("failed to allocate memory for indicies");
+        free(indicies);
+        return NULL;
+    }
 
-//         computer their mbr's
+    for (long long i = 0; i < g->node_count; i++) {
+        indicies[i] = i;
+    }
 
-//         repeat until at root
-//     */
-// }
+    // sort by longitute
+    merge_sort(indicies, 0, g->node_count, g, 1);
+    
+    /*
+        --- step 2 ---
+        split into column based on MAX_CHILDREN
+        [A, B, C] [D, E, F] [G, H, I]
+    */
+
+    /*
+    get the toal leaves (each leaf holds MAX_CHILDREN)
+
+    to get a even distribution we get the square root as it splits it into a grid of leafes, this reduces overlap
+
+    this results in the total number of slices needed to get a balances tree
+    */
+    long long total_leaves = (g->node_count + MAX_CHILDREN - 1) / MAX_CHILDREN;
+    long long num_slice = (long long)ceil(sqrt((double)total_leaves));
+    long long slice_size = num_slice * MAX_CHILDREN;
+    
+    // create an array of pointers to leaves
+    RTreeNode **leaves = malloc(total_leaves * sizeof(RTreeNode*));
+    long long leaf_count = 0;
+
+    for (long long slice = 0; slice < num_slice; slice++) {
+        /*
+            --- step 3 ---
+            within each longitude slice, sory by latitude
+            [A, B, C] sorted south to north
+        */
+        long long start = slice * slice_size;
+        long long end = (slice * slice_size) + slice_size;
+
+        if (end > g->node_count) {
+            end = g->node_count;
+        }
+
+        merge_sort(indicies, start, end, g, 0);
+
+        /*
+            --- steo 4 ---
+            group every MAX_CHILDREN nodes into leaves
+
+            compute minimum bounding range
+        */
+        long long num_of_leaves = (end - start + MAX_CHILDREN - 1) / MAX_CHILDREN;
+        for (long long leaf = 0; leaf < num_of_leaves; leaf++) {
+            RTreeNode *cur_leaf = malloc(sizeof(RTreeNode));
+
+            if (cur_leaf == NULL) {
+                printf("Could not allocate memory for cur_leaf");
+                free(cur_leaf);
+                return NULL;
+            }
+
+            cur_leaf->is_leaf = 1;
+
+            // get start and end position of the leaf, used to allocate choldren
+            long long leaf_start = start + leaf * MAX_CHILDREN;
+            long long leaf_end = leaf_start + MAX_CHILDREN;
+
+            // make sure leaf_end is not larger the slice
+            if (leaf_end > end) {
+                leaf_end = end;
+            }
+
+            // assign the children count to leaf
+            cur_leaf->children_count = leaf_end - leaf_start;
+
+            // assign the children to the leaf node
+            for (long long child = 0; child < cur_leaf->children_count; child++) {
+                cur_leaf->entries[child] = indicies[leaf_start + child];
+            }
+
+            compute_mbr(cur_leaf, g);
+
+            // add leaf to the leaf array
+            leaves[leaf_count++] = cur_leaf;
+        }
+    }
+    /*
+        --- step 5 ---
+
+        group leaves into internal nodes
+
+        computer their mbr's
+
+        repeat until at root
+    */
+    RTreeNode **cur_level = leaves;
+    long long leaf_level_count = total_leaves;
+
+    while (leaf_level_count > 1) {
+        long long new_count = (leaf_level_count + MAX_CHILDREN - 1) / MAX_CHILDREN;
+        RTreeNode **new_level = malloc(new_count * sizeof(RTreeNode*));
+
+        if (new_level == NULL) {
+            printf("failed to allocate memory for new_level\n");
+            return NULL;
+        }
+
+        for (long long i = 0; i < new_count; i++) {
+            RTreeNode *internal_node = malloc(sizeof(RTreeNode));
+
+            internal_node->is_leaf = 0;
+            internal_node->children_count = 0;
+
+            long long current_pos = i * MAX_CHILDREN;
+            
+            // add children nodes to internal_node
+            for (int j = 0; (j < MAX_CHILDREN) && (current_pos + j < leaf_level_count); j++) {
+                internal_node->children[j] = cur_level[current_pos + j];
+                internal_node->children_count++;
+            }
+
+            compute_mbr(internal_node, g);
+
+            new_level[i] = internal_node;
+        }
+
+        cur_level = new_level;
+        leaf_level_count = new_count;
+    }
+
+    RTree *tree = malloc(sizeof(RTree));
+    tree->root = cur_level[0];
+    tree->size = g->node_count;
+
+    free(indicies);
+    free(cur_level);
+
+    return tree;
+}
 
 
 
@@ -156,6 +306,6 @@ void merge_sort(long long *indicies, long long left, long long right, Graph *g, 
 
 // }
 
-// void rtree_free(RTree *rtree) {
-
-// }
+void rtree_free(RTree *rtree) {
+    
+}

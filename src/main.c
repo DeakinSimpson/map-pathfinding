@@ -34,6 +34,10 @@ int main(int argc, char* argv[]) {
     } else {
         printf("travel time: %f minutes\ndistance travelled: %f kms\ntime to load: %f seconds\n", (dijkstra_rp->time_in_seconds / 60), (dijkstra_rp->distance_in_metres / 1000), dijkstra_rp->load_time_in_seconds);
     }
+
+    // rtee testingf
+    RTree *tree = rtree_build(g);
+    printf("rtree size: %lld\n", tree->size);
     
     // freeing variables
     adjlist_free(adj, g->node_count);
