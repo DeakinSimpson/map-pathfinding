@@ -4,6 +4,7 @@
 #include "stdio.h"
 #include "float.h"
 #include <math.h>
+#include <time.h>
 
 /*
 merges two halves back into one
@@ -313,14 +314,78 @@ RTree* rtree_build(Graph *g) {
     return tree;
 }
 
-long long rtree_nearest_node(RTreeNode node, Coordinate coord) {
+// gets the minimum distance from mbr to node squared
+static double mbr_min_dist_sq(Coordinate coord, MinimumBoundingRectangle *mbr) {
+    // set distances to 0
+    double dlat = 0.0, dlon = 0.0;
 
-    return -1;
+    if      (coord.lat < mbr->min_lat) dlat = mbr->min_lat - coord.lat;
+    else if (coord.lat > mbr->max_lat) dlat = coord.lat - mbr->max_lat;
+    if      (coord.lon < mbr->min_lon) dlon = mbr->min_lon - coord.lon;
+    else if (coord.lon > mbr->max_lon) dlon = coord.lon - mbr->max_lon;
+
+    return dlat * dlat + dlon * dlon;
 }
 
-long long rtree_nearest(RTree rtree, Coordinate coord) {
+/*
+finds the closest distance squared
 
-    return -1;
+this is done because performing a
+square root operation on every node
+can become very costly, as we are
+only looking to compare the distance
+and not get the actual distance we
+can just compare the squared distance
+*/
+void rtree_nearest_node(RTreeNode *node, Coordinate coord, Graph *g, AdjList *adj, long long *best_index, double *best_dist) {
+    if (node->is_leaf == 1) {
+        for (int i = 0; i < node->children_count; i++) {
+            long long idx = node->entries[i];
+            
+            // check if the value has edges
+            if (adj[idx].count == 0) {
+                continue;
+            }
+
+            // get distance in lat and lon
+            double dlat = g->nodes[idx].lat - coord.lat;
+            double dlon = g->nodes[idx].lon - coord.lon;
+
+            // get distance
+            double d = dlat * dlat + dlon * dlon;
+            
+            // check if it is closer
+            if (d < *best_dist) {
+                *best_dist = d;
+                *best_index = idx;
+            }
+        }
+    } else {
+        // check each node in the node if its internal
+        for (int i = 0; i < node->children_count; i++) {
+            // only do this if the node is within the square
+            double d = mbr_min_dist_sq(coord, &node->children[i]->mbr);
+
+            // if the distance is better then make it best
+            if (d < *best_dist) {
+                rtree_nearest_node(node->children[i], coord, g, adj, best_index, best_dist);
+            }
+        }
+    }
+}
+
+long long rtree_nearest(RTree *tree, Coordinate coord, Graph *g, AdjList *adj) {
+    clock_t t = clock();
+
+    long long best_index = -1;
+    double best_dist = DBL_MAX;
+
+    rtree_nearest_node(tree->root, coord, g, adj, &best_index, &best_dist);
+
+    t = clock() - t;
+    printf("time taken to find node rtree: %lld, %fs\n", best_index, (double)t / CLOCKS_PER_SEC);
+
+    return best_index;
 }
 
 // void rtree_range(RTree *rtree, MinimumBoundingRectangle mbr, long long *results, long long *count) {

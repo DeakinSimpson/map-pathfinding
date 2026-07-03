@@ -58,7 +58,7 @@ void merge(long long *indicies, long long left, long long mid, long long right, 
 void merge_sort(long long *indicies, long long left, long long right, Graph *g, int sort_by_lon);
 
 RTree* rtree_build(Graph *g);
-long long rtree_nearest(RTree rtree, Coordinate coord);
+long long rtree_nearest(RTree *tree, Coordinate coord, Graph *g, AdjList *adj);
 // void rtree_range(RTree *rtree, MinimumBoundingRectangle mbr, long long *results, long long *count);
 void rtree_free_node(RTreeNode *node);
 void rtree_free(RTree *rtree);
