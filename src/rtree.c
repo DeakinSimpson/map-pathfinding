@@ -266,6 +266,14 @@ RTree* rtree_build(Graph *g) {
         for (long long i = 0; i < new_count; i++) {
             RTreeNode *internal_node = malloc(sizeof(RTreeNode));
 
+            if (internal_node == NULL) {
+                printf("failed to allocate memory for internal_node\n");
+                free(new_level);
+                free(indicies);
+                free(cur_level);
+                return NULL;
+            }
+
             internal_node->is_leaf = 0;
             internal_node->children_count = 0;
 
@@ -282,11 +290,20 @@ RTree* rtree_build(Graph *g) {
             new_level[i] = internal_node;
         }
 
+        free(cur_level);
         cur_level = new_level;
         leaf_level_count = new_count;
     }
 
     RTree *tree = malloc(sizeof(RTree));
+
+    if (tree == NULL) {
+        printf("failed to allocate memory for tree\n");
+        free(indicies);
+        free(cur_level);
+        return NULL;
+    }
+
     tree->root = cur_level[0];
     tree->size = g->node_count;
 
@@ -296,16 +313,37 @@ RTree* rtree_build(Graph *g) {
     return tree;
 }
 
+long long rtree_nearest_node(RTreeNode node, Coordinate coord) {
 
+    return -1;
+}
 
-// long long rtree_nearest(RTree rtree, Coordinate coord) {
+long long rtree_nearest(RTree rtree, Coordinate coord) {
 
-// }
+    return -1;
+}
 
 // void rtree_range(RTree *rtree, MinimumBoundingRectangle mbr, long long *results, long long *count) {
 
 // }
 
+// frees a rtree node
+void rtree_free_node(RTreeNode *node) {
+    if (node->is_leaf == 0) {
+
+        for (int i = 0; i < node->children_count; i++) {
+
+            rtree_free_node(node->children[i]);
+
+        }
+    }
+
+    free(node);
+}
+
+// free entire rtree recursively
 void rtree_free(RTree *rtree) {
-    
+    rtree_free_node(rtree->root);
+
+    free(rtree);
 }

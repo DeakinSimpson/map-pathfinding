@@ -44,6 +44,7 @@ int main(int argc, char* argv[]) {
     hashmap_free(map);
     graph_free(g);
     result_path_free(dijkstra_rp);
+    rtree_free(tree);
 
     printf("Terminating Program...\n");
     return 0;
