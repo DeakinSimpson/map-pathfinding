@@ -57,6 +57,13 @@ int main(int argc, char* argv[]) {
         printf("Astar:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (astar_rp->time_in_seconds / 60), (astar_rp->distance_in_metres / 1000), astar_rp->load_time_in_seconds);
     }
 
+    ResultPath *astar_reverse_rp = astar(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
+    if (astar_reverse_rp == NULL) {
+        printf("dFailed to find path\n");
+    } else {
+        printf("Astar Reverse:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (astar_reverse_rp->time_in_seconds / 60), (astar_reverse_rp->distance_in_metres / 1000), astar_reverse_rp->load_time_in_seconds);
+    }
+
     // freeing variables
     adjlist_free(adj, g->node_count);
     hashmap_free(map);
