@@ -17,20 +17,17 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Pathfinder Starting...\n");
-    const char* path = argv[1];
-    Coordinate src_coord;
-    Coordinate dst_coord;
-
-    utils_get_coord(&src_coord, &dst_coord, argv);
-
     // initialise variables
-    Graph* g = graph_load(path);
+    const char* bin_path = argv[1];
+    Graph *g = graph_load(bin_path);
     HashMap* map = hashmap_create_index_from_graph(g);
     AdjList *adj = adjlist_create(g, map);
     RTree *tree = rtree_build(g);
 
-    long long src_index = rtree_nearest(tree, src_coord, g, adj);
-    long long dst_index = rtree_nearest(tree, dst_coord, g, adj);
+    // get indexes
+    long long src_index;
+    long long dst_index;
+    utils_get_index(&src_index, &dst_index, argv, tree, g, adj);
 
     // run algorithms
     ResultPath *dijkstra_rp = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
