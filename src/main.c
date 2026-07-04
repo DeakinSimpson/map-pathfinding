@@ -18,11 +18,11 @@ int main(int argc, char* argv[]) {
 
     printf("Pathfinder Starting...\n");
     // initialise variables
-    const char* bin_path = argv[1];
-    Graph *g = graph_load(bin_path);
-    HashMap* map = hashmap_create_index_from_graph(g);
-    AdjList *adj = adjlist_create(g, map);
-    RTree *tree = rtree_build(g);
+    const char  *bin_path   = argv[1];
+    Graph       *g          = graph_load(bin_path);
+    HashMap     *map        = hashmap_create_index_from_graph(g);
+    AdjList     *adj        = adjlist_create(g, map);
+    RTree       *tree       = rtree_build(g);
 
     // get indexes
     long long src_index;
@@ -30,18 +30,26 @@ int main(int argc, char* argv[]) {
     utils_get_index(&src_index, &dst_index, argv, tree, g, adj);
 
     // run algorithms
-    ResultPath *dijkstra_rp = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
-    if (dijkstra_rp == NULL) {
+    ResultPath *dijkstra_rp_full = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id, 0);
+    if (dijkstra_rp_full == NULL) {
         printf("dFailed to find path\n");
     } else {
-        printf("travel time: %f minutes\ndistance travelled: %f kms\ntime to load: %f seconds\n", (dijkstra_rp->time_in_seconds / 60), (dijkstra_rp->distance_in_metres / 1000), dijkstra_rp->load_time_in_seconds);
+        printf("Dijksta full:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (dijkstra_rp_full->time_in_seconds / 60), (dijkstra_rp_full->distance_in_metres / 1000), dijkstra_rp_full->load_time_in_seconds);
+    }
+
+    ResultPath *dijkstra_rp_early = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id, 1);
+    if (dijkstra_rp_early == NULL) {
+        printf("dFailed to find path\n");
+    } else {
+        printf("Dijksta early:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (dijkstra_rp_early->time_in_seconds / 60), (dijkstra_rp_early->distance_in_metres / 1000), dijkstra_rp_early->load_time_in_seconds);
     }
 
     // freeing variables
     adjlist_free(adj, g->node_count);
     hashmap_free(map);
     graph_free(g);
-    result_path_free(dijkstra_rp);
+    result_path_free(dijkstra_rp_full);
+    result_path_free(dijkstra_rp_early);
     rtree_free(tree);
 
     printf("Terminating Program...\n");
