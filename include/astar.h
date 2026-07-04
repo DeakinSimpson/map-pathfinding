@@ -5,6 +5,7 @@
 #include "adjacency.h"
 #include "hashmap.h"
 
+double heuristic(Coordinate a, Coordinate b);
 ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id);
 
 #endif

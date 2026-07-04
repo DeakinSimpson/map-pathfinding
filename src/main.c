@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "graph.h"
 #include "hashmap.h"
 #include "adjacency.h"
@@ -19,11 +20,15 @@ int main(int argc, char* argv[]) {
 
     printf("Pathfinder Starting...\n");
     // initialise variables
+    clock_t t = clock();
+    
     const char  *bin_path   = argv[1];
     Graph       *g          = graph_load(bin_path);
     HashMap     *map        = hashmap_create_index_from_graph(g);
-    AdjList     *adj        = adjlist_create(g, map);
+    AdjList     *adj        = adjlist_create(g, map, 0);
     RTree       *tree       = rtree_build(g);
+    t = clock() - t;
+    printf("Variables Loaded in %fs\n\n", ((double)t / CLOCKS_PER_SEC));
 
     // get indexes
     long long src_index;

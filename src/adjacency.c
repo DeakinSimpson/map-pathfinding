@@ -4,7 +4,7 @@
 #include <float.h>
 #include <time.h>
 
-AdjList* adjlist_create(Graph *g, HashMap *map) {
+AdjList* adjlist_create(Graph *g, HashMap *map, int reverse) {
     // allocate an adjacency list per node
     AdjList *adj = calloc(g->node_count, sizeof(AdjList));
 
@@ -18,7 +18,12 @@ AdjList* adjlist_create(Graph *g, HashMap *map) {
         Edge *e = &g->edges[i];
 
         // convert the OSM id into hashmap index
-        long long src_index = hashmap_get(map, e->src);
+        long long src_index;
+        if (reverse == 1) {
+            src_index = hashmap_get(map, e->dst);
+        } else {
+            src_index = hashmap_get(map, e->src);
+        }
 
         if (src_index == -1) {
             printf("failed to get hashmap for %lld", src_index);
@@ -39,7 +44,12 @@ AdjList* adjlist_create(Graph *g, HashMap *map) {
         }
 
         // add the edge
-        list->edges[list->count].dst_index = hashmap_get(map, e->dst);
+        if (reverse == 1) {
+            list->edges[list->count].dst_index = hashmap_get(map, e->src);
+        } else {
+            list->edges[list->count].dst_index = hashmap_get(map, e->dst);
+        }
+
         list->edges[list->count].weight = e->weight;
         list->edges[list->count].speed_limit = e->speed_limit;
         list->edges[list->count].road_type = e->road_type;

@@ -18,8 +18,7 @@ typedef struct {
     long long capacity;
 } AdjList;
 
-AdjList* adjlist_create(Graph *g, HashMap *index);
+AdjList* adjlist_create(Graph *g, HashMap *map, int reverse);
 void adjlist_free(AdjList *adj, long long node_count);
-long long graph_nearest_node(Graph *g, Coordinate coord, AdjList *adj);
 
 #endif

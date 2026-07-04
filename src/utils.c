@@ -9,10 +9,11 @@
 // Define places
 Place PLACES[] = {
     {"Venice", {45.441310241560494, 12.31523127982292}},
-    {"Vicenza", {45.54745520724044, 11.547651470387395}}
+    {"Vicenza", {45.54745520724044, 11.547651470387395}},
+    {"Rome", {41.89107596300499, 12.492670206083258}}
 };
 
-int PLACES_COUNT = 2;
+int PLACES_COUNT = 3;
 
 void utils_parse_arg(Coordinate *src_coord, Coordinate *dst_coord, char *argv[]) {
     src_coord->lat = atof(argv[3]);

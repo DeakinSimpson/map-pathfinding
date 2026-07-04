@@ -6,6 +6,17 @@
 #include <stdlib.h>
 #include <float.h>      // used for DBL_MAX
 #include <time.h>
+#include <math.h>
+
+double heuristic(Coordinate a, Coordinate b) {
+    // one degree in lat and lon is about 111km this is super innacurate however is faster then computing
+    double lat = (a.lat - b.lat) * 111.0;
+    double lon = (a.lon - b.lon) * 111.0;
+
+    double distance = lat * lat + lon * lon;
+
+    return distance;
+}
 
 ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id) {
     clock_t t = clock();
@@ -26,7 +37,7 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
     if (dst_index == -1)
     {
         printf("failed to get index for dst");
-
+        
         return NULL;
     }
 
@@ -162,7 +173,7 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
                 Coordinate c_coord = {g->nodes[v].lat, g->nodes[v].lon};
                 Coordinate d_coord = {g->nodes[dst_index].lat, g->nodes[dst_index].lon};
                 
-                double dist_heur = haversine(c_coord, d_coord);
+                double dist_heur = heuristic(c_coord, d_coord);
                 double speed_ms_heur = 100.0 / 3.6;
                 double time_heur = dist_heur / speed_ms_heur;
                 double heuristic = dist[v] + time_heur;
