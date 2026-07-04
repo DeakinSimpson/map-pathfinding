@@ -315,7 +315,7 @@ RTree* rtree_build(Graph *g) {
 }
 
 // gets the minimum distance from mbr to node squared
-static double mbr_min_dist_sq(Coordinate coord, MinimumBoundingRectangle *mbr) {
+double mbr_min_dist_sq(Coordinate coord, MinimumBoundingRectangle *mbr) {
     // set distances to 0
     double dlat = 0.0, dlon = 0.0;
 

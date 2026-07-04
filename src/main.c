@@ -5,19 +5,23 @@
 #include "adjacency.h"
 #include "dijkstra.h"
 #include "rtree.h"
+#include "string.h"
+#include "utils.h"
 
 int main(int argc, char* argv[]) {
     // initialise terminal variables
-    if (argc != 6) {
-        printf("usage: ./builder/pathfinder.exe <path_to_bin> <src lat> <src lon> <dst lat> <dst lon>\n");
+    if (argc != 7  && argc != 5) {
+        printf("usage: ./builder/pathfinder.exe <path_to_bin> -c <src lat> <src lon> <dst lat> <dst lon>\n");
+        printf("usage: ./builder/pathfinder.exe <path_to_bin> -d <src place> <dst place>\n");
         return 1;
     }
 
     printf("Pathfinder Starting...\n");
-
     const char* path = argv[1];
-    Coordinate src_coord = {atof(argv[2]), atof(argv[3])};
-    Coordinate dst_coord = {atof(argv[4]), atof(argv[5])};
+    Coordinate src_coord;
+    Coordinate dst_coord;
+
+    utils_get_coord(&src_coord, &dst_coord, argv);
 
     // initialise variables
     Graph* g = graph_load(path);

@@ -2,6 +2,7 @@
 #define RTREE_H
 
 #include "graph.h"
+#include "adjacency.h"
 
 /*
 Minimum bounding box for the R-Tree
@@ -58,6 +59,7 @@ void merge(long long *indicies, long long left, long long mid, long long right, 
 void merge_sort(long long *indicies, long long left, long long right, Graph *g, int sort_by_lon);
 
 RTree* rtree_build(Graph *g);
+double mbr_min_dist_sq(Coordinate coord, MinimumBoundingRectangle *mbr);
 long long rtree_nearest(RTree *tree, Coordinate coord, Graph *g, AdjList *adj);
 // void rtree_range(RTree *rtree, MinimumBoundingRectangle mbr, long long *results, long long *count);
 void rtree_free_node(RTreeNode *node);

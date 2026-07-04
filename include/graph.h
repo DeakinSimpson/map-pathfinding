@@ -56,8 +56,6 @@ typedef struct {
     double load_time_in_seconds;
 } ResultPath;
 
-#include "adjacency.h"
-
 // define functions for graph_c
 Graph* graph_create(long long node_capacity, long long edge_capacity);
 void graph_free(Graph* g);
