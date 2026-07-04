@@ -7,7 +7,7 @@
 #include "graph.h"
 #include "heap.h"
 
-ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id) {
+ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id, int early_break) {
     clock_t t = clock();
     // get source index from node id
     long long src_index = hashmap_get(map, src_id);
@@ -117,7 +117,7 @@ ResultPath* dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
         visited[u] = 1;
 
         // if u == dst_index break early 
-        if (u == dst_index) {
+        if (early_break == 1 && u == dst_index) {
             break;
         }
 
