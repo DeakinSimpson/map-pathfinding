@@ -7,6 +7,7 @@
 #include "rtree.h"
 #include "string.h"
 #include "utils.h"
+#include "astar.h"
 
 int main(int argc, char* argv[]) {
     // initialise terminal variables
@@ -42,6 +43,13 @@ int main(int argc, char* argv[]) {
         printf("dFailed to find path\n");
     } else {
         printf("Dijksta early:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (dijkstra_rp_early->time_in_seconds / 60), (dijkstra_rp_early->distance_in_metres / 1000), dijkstra_rp_early->load_time_in_seconds);
+    }
+
+    ResultPath *astar_rp = astar(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
+    if (astar_rp == NULL) {
+        printf("dFailed to find path\n");
+    } else {
+        printf("Astar:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (astar_rp->time_in_seconds / 60), (astar_rp->distance_in_metres / 1000), astar_rp->load_time_in_seconds);
     }
 
     // freeing variables
