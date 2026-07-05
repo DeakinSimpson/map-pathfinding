@@ -51,15 +51,17 @@ int main(int argc, char* argv[]) {
     utils_print_results(astar_reverse_rp);
 
     // ch testing
-    CHGraph *ch_g = ch_init(g);
-    printf("testing: %lld\n", ch_g->rank[0]);
+    CHGraph *ch_g = ch_build(g, adj, adj_r);
+    if (ch_g != NULL) {
+        printf("success\n");
+    }
 
     // freeing variables
     adjlist_free(adj, g->node_count);
     hashmap_free(map);
     graph_free(g);
-    result_path_free(dijkstra_rp_full);
-    result_path_free(dijkstra_rp_early);
+    // result_path_free(dijkstra_rp_full);
+    // result_path_free(dijkstra_rp_early);
     rtree_free(tree);
 
     printf("Terminating Program...\n");

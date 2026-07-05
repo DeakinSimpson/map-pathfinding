@@ -4,6 +4,9 @@
 #include "heap.h"
 #include "stdlib.h"
 #include "float.h"
+#include "time.h"
+
+#define HOP_LIMIT 5
 
 // initialises contraction highrachy
 CHGraph *ch_init(Graph *g)
@@ -31,6 +34,7 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
 {
     double      *dist;
     long long   *visited;
+    int         *hops;
     MinHeap     *heap;
 
     dist = malloc(g->node_count * sizeof(double));
@@ -39,16 +43,21 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
     visited = malloc(g->node_count * sizeof(long long));
     if (visited == NULL) {free(dist); free(visited); return NULL;}
 
+    hops = malloc(g->node_count * sizeof(int));
+    if (hops == NULL) {free(dist); free(visited); free(hops); return NULL;}
+
     for (long long i = 0; i < g->node_count; i++)
     {
         dist[i] = DBL_MAX;
         visited[i] = 0;
+        hops[i] = INT_MAX;
     }
 
     dist[src] = 0;
+    hops[src] = 0;
 
     heap = createHeap(1024);
-    if (heap == NULL) {free(dist); free(visited); return NULL;}
+    if (heap == NULL) {free(dist); free(visited); free(hops); return NULL;}
 
     push(heap, 0, src);
 
@@ -62,7 +71,11 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
 
         if (visited[u] == 1) {continue;}
         if (u == skip_node) {continue;}
+        if (hops[u] >= HOP_LIMIT) {continue;}
+
         visited[u] = 1;
+
+        if (dist[u] > max_dist) break;
 
         for (int i = 0; i < adj[u].count; i++) {
             long long   v;
@@ -84,6 +97,7 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
 
             if (alt < dist[v]) {
                 dist[v] = alt;
+                hops[v]    = hops[u] + 1;
                 push(heap, alt, v);
             }
         }
@@ -91,6 +105,8 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
 
     freeHeap(heap);
     free(visited);
+    free(hops);
+    
     return dist;
 }
 
@@ -185,7 +201,7 @@ static int compare_scores(const void *a, const void *b)
 }
 
 // orderes the nodes based on there scores
-static long long *ch_ordered_nodes(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map)
+static long long *ch_ordered_nodes(Graph *g, AdjList *adj, AdjList *adj_r)
 {
     NodeScore *node_scores = malloc(g->node_count * sizeof(NodeScore));
     if (node_scores == NULL) return NULL;
@@ -279,4 +295,27 @@ static void ch_contract_node(Graph *g, AdjList *adj, AdjList *adj_r, CHGraph *ch
     }
 
     ch_g->rank[v] = rank;
+}
+
+CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
+{
+    clock_t t = clock();
+
+    CHGraph *ch_g = ch_init(g);
+
+    long long *order = ch_ordered_nodes(g, adj, adj_r);
+
+    for (int i = 0; i < g->node_count; i++)
+    {
+        long long v = order[i];
+        ch_contract_node(g, adj, adj_r, ch_g, v, i);
+    }
+
+    free(order);
+
+    t = clock() - t;
+
+    printf("Time to build contaction hierachy: %fs\n", ((double)t / CLOCKS_PER_SEC));
+
+    return ch_g;
 }
