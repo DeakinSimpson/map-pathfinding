@@ -50,6 +50,7 @@ typedef struct {
 } Coordinate;
 
 typedef struct {
+    const char *name;
     long long *path_inx;
     double time_in_seconds;
     double distance_in_metres;

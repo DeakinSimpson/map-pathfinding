@@ -61,3 +61,11 @@ void utils_get_index(long long *src_index, long long *dst_index, char *argv[], R
     *src_index = rtree_nearest(tree, src_coord, g, adj);
     *dst_index = rtree_nearest(tree, dst_coord, g, adj);
 }
+
+void utils_print_results(ResultPath *rp) {
+    if (rp == NULL) {
+        printf("dFailed to find path\n");
+    } else {
+        printf("%s\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", rp->name, (rp->time_in_seconds / 60), (rp->distance_in_metres / 1000), rp->load_time_in_seconds);
+    }
+}

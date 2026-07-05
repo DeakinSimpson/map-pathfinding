@@ -181,6 +181,11 @@ ResultPath *dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
     t = clock() - t;
 
     ResultPath *result = malloc(sizeof(ResultPath));
+    if (early_break) {
+        result->name = "Dijkstra Early Break";
+    } else {
+        result->name = "Dijkstra Full";
+    }
     result->path_inx = path;
     result->time_in_seconds = dist[dst_index];
     result->distance_in_metres = km_dist[dst_index];

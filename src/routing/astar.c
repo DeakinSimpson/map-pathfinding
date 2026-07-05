@@ -220,6 +220,7 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
     t = clock() - t;
 
     ResultPath *result = malloc(sizeof(ResultPath));
+    result->name = "A*";
     result->path_inx = path;
     result->time_in_seconds = dist[dst_index];
     result->distance_in_metres = km_dist[dst_index];
@@ -496,7 +497,10 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
                 best_meeting = u;
                 best_cost = dist_f[u] + dist_r[u];
             }
-            break;
+            
+            if (best_cost < heap_r->node[0].dist && best_cost < heap_f->node[0].dist) {
+                break;
+            }
         }
 
 
@@ -550,6 +554,8 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
         free(prev_r);
         free(dist_f);
         free(dist_r);
+        freeHeap(heap_f);
+        freeHeap(heap_r);
 
         return NULL;
     }
@@ -568,6 +574,8 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
         free(dist_f);
         free(dist_r);
         free(path_f);
+        freeHeap(heap_f);
+        freeHeap(heap_r);
 
         return NULL;
     }
@@ -666,6 +674,9 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
         return NULL;
     }
 
+    t = clock() - t;
+
+    result->name = "Bi-Directional A*";
     result->path_inx = path;
     result->time_in_seconds = best_cost;
     result->distance_in_metres = km_dist_f[best_meeting] + km_dist_r[best_meeting];
@@ -682,6 +693,8 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
     free(visited_r);
     free(km_dist_f);
     free(km_dist_r);
+    free(path_f);
+    free(path_r);
 
     return result;    
 }

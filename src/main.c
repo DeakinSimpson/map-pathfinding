@@ -9,6 +9,7 @@
 #include "string.h"
 #include "utils.h"
 #include "astar.h"
+#include "ch.h"
 
 int main(int argc, char* argv[]) {
     // initialise terminal variables
@@ -26,6 +27,7 @@ int main(int argc, char* argv[]) {
     Graph       *g          = graph_load(bin_path);
     HashMap     *map        = hashmap_create_index_from_graph(g);
     AdjList     *adj        = adjlist_create(g, map, 0);
+    AdjList     *adj_r      = adjlist_create(g, map, 1);
     RTree       *tree       = rtree_build(g);
     t = clock() - t;
     printf("Variables Loaded in %fs\n\n", ((double)t / CLOCKS_PER_SEC));
@@ -37,32 +39,20 @@ int main(int argc, char* argv[]) {
 
     // run algorithms
     ResultPath *dijkstra_rp_full = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id, 0);
-    if (dijkstra_rp_full == NULL) {
-        printf("dFailed to find path\n");
-    } else {
-        printf("Dijksta full:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (dijkstra_rp_full->time_in_seconds / 60), (dijkstra_rp_full->distance_in_metres / 1000), dijkstra_rp_full->load_time_in_seconds);
-    }
+    utils_print_results(dijkstra_rp_full);
 
     ResultPath *dijkstra_rp_early = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id, 1);
-    if (dijkstra_rp_early == NULL) {
-        printf("dFailed to find path\n");
-    } else {
-        printf("Dijksta early:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (dijkstra_rp_early->time_in_seconds / 60), (dijkstra_rp_early->distance_in_metres / 1000), dijkstra_rp_early->load_time_in_seconds);
-    }
+    utils_print_results(dijkstra_rp_early);
 
     ResultPath *astar_rp = astar(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
-    if (astar_rp == NULL) {
-        printf("dFailed to find path\n");
-    } else {
-        printf("Astar:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (astar_rp->time_in_seconds / 60), (astar_rp->distance_in_metres / 1000), astar_rp->load_time_in_seconds);
-    }
+    utils_print_results(astar_rp);
 
-    ResultPath *astar_reverse_rp = astar(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
-    if (astar_reverse_rp == NULL) {
-        printf("dFailed to find path\n");
-    } else {
-        printf("Astar Reverse:\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", (astar_reverse_rp->time_in_seconds / 60), (astar_reverse_rp->distance_in_metres / 1000), astar_reverse_rp->load_time_in_seconds);
-    }
+    ResultPath *astar_reverse_rp = astar_bidir(g, adj, adj_r, map, g->nodes[src_index].id, g->nodes[dst_index].id);
+    utils_print_results(astar_reverse_rp);
+
+    // ch testing
+    CHGraph *ch_g = ch_init(g);
+    printf("testing: %lld\n", ch_g->rank[0]);
 
     // freeing variables
     adjlist_free(adj, g->node_count);
