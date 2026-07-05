@@ -1,6 +1,5 @@
 #include "ch.h"
 #include "adjacency.h"
-#include "hashmap.h"
 #include "heap.h"
 #include "stdlib.h"
 #include "float.h"
@@ -24,12 +23,19 @@ CHGraph *ch_init(Graph *g)
     return ch_g;
 }
 
-static double* local_dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src, long long skip_node, double max_dist)
+/*
+runs a dijkstra from v outwards to max_dist
+*/
+static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long skip_node, double max_dist)
 {
-    double *dist = malloc(g->node_count * sizeof(double));
+    double      *dist;
+    long long   *visited;
+    MinHeap     *heap;
+
+    dist = malloc(g->node_count * sizeof(double));
     if (dist == NULL) {free(dist); return NULL;}
 
-    long long* visited = malloc(g->node_count * sizeof(long long));
+    visited = malloc(g->node_count * sizeof(long long));
     if (visited == NULL) {free(dist); free(visited); return NULL;}
 
     for (long long i = 0; i < g->node_count; i++)
@@ -40,27 +46,35 @@ static double* local_dijkstra(Graph *g, AdjList *adj, HashMap *map, long long sr
 
     dist[src] = 0;
 
-    MinHeap *heap = createHeap(1024);
-    if (heap == NULL) {freeHeap(heap); free(dist); free(visited); return NULL;}
+    heap = createHeap(1024);
+    if (heap == NULL) {free(dist); free(visited); return NULL;}
 
     push(heap, 0, src);
 
     while (heap->size > 0)
     {
-        HeapNode cur_node = pop(heap);
-        long long u = cur_node.nodeIndex;
+        HeapNode    cur_node;
+        long long   u;
+
+        cur_node = pop(heap);
+        u = cur_node.nodeIndex;
 
         if (visited[u] == 1) {continue;}
         if (u == skip_node) {continue;}
         visited[u] = 1;
 
         for (int i = 0; i < adj[u].count; i++) {
-            long long v = adj->edges[i].dst_index;
+            long long   v;
+            double      speed_ms;
+            double      time;
+            double      alt;
+
+            v = adj[u].edges[i].dst_index;
             if (v == -1 || visited[v] == 1) {continue;}
 
-            double speed_ms = adj->edges[i].speed_limit / 3.6;
-            double time = adj->edges[i].weight / speed_ms;
-            double alt = dist[u] + time;
+            speed_ms    = adj[u].edges[i].speed_limit / 3.6;
+            time        = adj[u].edges[i].weight / speed_ms;
+            alt         = dist[u] + time;
 
             if (alt < dist[v]) {
                 dist[v] = alt;
@@ -72,4 +86,62 @@ static double* local_dijkstra(Graph *g, AdjList *adj, HashMap *map, long long sr
     freeHeap(heap);
     free(visited);
     return dist;
+}
+
+/*
+Gets the number of shortcuts between nodes that can be made if v was removed
+*/
+static int edge_difference(Graph *g, AdjList *adj, AdjList *adj_r, long long v)
+{
+    double max_dist = 0.0;   
+
+    for (int i = 0; i < adj_r[v].count; i++) 
+    {
+        double u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
+
+        for (int j = 0; j < adj[v].count; j++) 
+        {
+            double w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
+            double through_v = u_time + w_time;
+
+            if (through_v > max_dist)
+            {
+                max_dist = through_v;
+            }
+        }
+    }
+
+    int shortcuts = 0;
+
+    for (int i = 0; i < adj_r[v].count; i++) 
+    {
+        long long u;
+        double u_time;
+        double *dist;
+
+        u = adj_r[v].edges[i].dst_index;
+        u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
+
+        dist = local_dijkstra(g, adj, u, v, max_dist);
+
+        for (int j = 0; j < adj[v].count; j++)
+        {
+            long long w;
+            double w_time;
+
+            w = adj[v].edges[j].dst_index;
+            w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
+
+            if (dist[w] > u_time + w_time)
+            {
+                shortcuts++;
+            }
+        }
+
+        free(dist);
+    }
+
+    int edges_removed = adj_r[v].count + adj[v].count;
+
+    return shortcuts - edges_removed;
 }
