@@ -1,5 +1,6 @@
 #include "ch.h"
 #include "adjacency.h"
+#include "hashmap.h"
 #include "heap.h"
 #include "stdlib.h"
 #include "float.h"
@@ -144,4 +145,40 @@ static int edge_difference(Graph *g, AdjList *adj, AdjList *adj_r, long long v)
     int edges_removed = adj_r[v].count + adj[v].count;
 
     return shortcuts - edges_removed;
+}
+
+static int compare_scores(const void *a, const void *b)
+{
+    NodeScore *na = (NodeScore*)a;
+    NodeScore *nb = (NodeScore*)b;
+
+    return na->score - nb->score;
+}
+
+// orderes the nodes based on there scores
+static long long *ch_ordered_nodes(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map)
+{
+    NodeScore *node_scores = malloc(g->node_count * sizeof(NodeScore));
+    if (node_scores == NULL) return NULL;
+
+    for (int i = 0; i < g->node_count; i++)
+    {
+        node_scores[i].index = i;
+        node_scores[i].score = edge_difference(g, adj, adj_r, i);
+    }
+
+    qsort(node_scores, g->node_count, sizeof(NodeScore), compare_scores);
+
+    long long *result = malloc(g->node_count * sizeof(long long));
+
+    if (result == NULL) {free(node_scores); return NULL;}
+
+    for (int i = 0; i < g->node_count; i++)
+    {
+        result[i] = node_scores[i].index;
+    }
+
+    free(node_scores);
+
+    return result;
 }

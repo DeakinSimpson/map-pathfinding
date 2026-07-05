@@ -9,6 +9,12 @@ typedef struct
     long long *rank;
 } CHGraph;
 
+typedef struct 
+{
+    long long index;
+    int score;
+} NodeScore;
+
 CHGraph *ch_init(Graph *g);
 
 #endif
