@@ -498,7 +498,8 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
                 best_cost = dist_f[u] + dist_r[u];
             }
             
-            if (best_cost < heap_r->node[0].dist && best_cost < heap_f->node[0].dist) {
+            
+            if (dist_f[u] + dist_r[u] >= best_cost) {
                 break;
             }
         }
