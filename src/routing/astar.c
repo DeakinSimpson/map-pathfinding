@@ -432,7 +432,7 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
         free(dist_r);
 
         return NULL;
-    }    
+    }
 
     push(heap_f, 0, src_index);
     push(heap_r, 0, dst_index);
@@ -440,7 +440,6 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
     long long best_meeting = -1;
     double best_cost = DBL_MAX;
 
-    long long i = 0;
     while (heap_f->size > 0 && heap_r->size > 0) 
     {
         double *dist_c;
@@ -454,7 +453,8 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
         long long target_index;
         long long *visited_o;
 
-        if (i % 2 == 0) 
+        // expand on the side with the best distance
+        if (heap_f->node[0].dist <= heap_r->node[0].dist) 
         {
             dist_c      = dist_f;
             km_dist_c   = km_dist_f;
@@ -498,7 +498,11 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
                 best_cost = dist_f[u] + dist_r[u];
             }
             
-            
+            /*
+            updated this to compare the actual distance rather then the theoretical 
+
+            this is because it was checking 
+            */
             if (dist_f[u] + dist_r[u] >= best_cost) {
                 break;
             }
@@ -539,8 +543,6 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
                 push(heap_c, heuristic, v);
             }
         }
-
-        i++;
     }
 
     if (best_meeting == -1)

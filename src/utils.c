@@ -66,6 +66,15 @@ void utils_print_results(ResultPath *rp) {
     if (rp == NULL) {
         printf("dFailed to find path\n");
     } else {
-        printf("%s\n\ttravel time: %f minutes\n\tdistance travelled: %f kms\n\ttime to load: %f seconds\n", rp->name, (rp->time_in_seconds / 60), (rp->distance_in_metres / 1000), rp->load_time_in_seconds);
+        printf( 
+                "%s\n"
+                "\ttravel time: %f minutes\n"
+                "\tdistance travelled: %f kms\n"
+                "\ttime to load: %f seconds\n", 
+                rp->name, 
+                (rp->time_in_seconds / 60), 
+                (rp->distance_in_metres / 1000), 
+                rp->load_time_in_seconds
+            );
     }
 }
