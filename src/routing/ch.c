@@ -73,8 +73,13 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
             v = adj[u].edges[i].dst_index;
             if (v == -1 || visited[v] == 1) {continue;}
 
-            speed_ms    = adj[u].edges[i].speed_limit / 3.6;
-            time        = adj[u].edges[i].weight / speed_ms;
+            if (adj[u].edges[i].speed_limit == 0) {
+                time = adj[u].edges[i].weight;
+            } else {
+                speed_ms = adj[u].edges[i].speed_limit / 3.6;
+                time = adj[u].edges[i].weight / speed_ms;
+            }
+            
             alt         = dist[u] + time;
 
             if (alt < dist[v]) {
@@ -96,13 +101,25 @@ static int edge_difference(Graph *g, AdjList *adj, AdjList *adj_r, long long v)
 {
     double max_dist = 0.0;   
 
-    for (int i = 0; i < adj_r[v].count; i++) 
+    for (int i = 0; i < adj_r[v].count; i++)
     {
-        double u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
+        double u_time;
+        if (adj_r[v].edges[i].speed_limit == 0) {
+            u_time = adj_r[v].edges[i].weight;
+        } else {
+            double u_speed_ms = adj_r[v].edges[i].speed_limit / 3.6;
+            u_time = adj_r[v].edges[i].weight / u_speed_ms;
+        }
 
-        for (int j = 0; j < adj[v].count; j++) 
+        for (int j = 0; j < adj[v].count; j++)
         {
-            double w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
+            double w_time;
+            if (adj[v].edges[j].speed_limit == 0) {
+                w_time = adj[v].edges[j].weight;
+            } else {
+                double w_speed_ms = adj[v].edges[j].speed_limit / 3.6;
+                w_time = adj[v].edges[j].weight / w_speed_ms;
+            }
             double through_v = u_time + w_time;
 
             if (through_v > max_dist)
@@ -117,21 +134,33 @@ static int edge_difference(Graph *g, AdjList *adj, AdjList *adj_r, long long v)
     for (int i = 0; i < adj_r[v].count; i++) 
     {
         long long u;
-        double u_time;
         double *dist;
 
         u = adj_r[v].edges[i].dst_index;
-        u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
+
+        double u_time;
+        if (adj_r[v].edges[i].speed_limit == 0) {
+            u_time = adj_r[v].edges[i].weight;
+        } else {
+            double u_speed_ms = adj_r[v].edges[i].speed_limit / 3.6;
+            u_time = adj_r[v].edges[i].weight / u_speed_ms;
+        }
 
         dist = local_dijkstra(g, adj, u, v, max_dist);
 
         for (int j = 0; j < adj[v].count; j++)
         {
             long long w;
-            double w_time;
 
             w = adj[v].edges[j].dst_index;
-            w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
+
+            double w_time;
+            if (adj[v].edges[j].speed_limit == 0) {
+                w_time = adj[v].edges[j].weight;
+            } else {
+                double w_speed_ms = adj[v].edges[j].speed_limit / 3.6;
+                w_time = adj[v].edges[j].weight / w_speed_ms;
+            }
 
             if (dist[w] > u_time + w_time)
             {
@@ -181,4 +210,73 @@ static long long *ch_ordered_nodes(Graph *g, AdjList *adj, AdjList *adj_r, HashM
     free(node_scores);
 
     return result;
+}
+
+static void ch_contract_node(Graph *g, AdjList *adj, AdjList *adj_r, CHGraph *ch_g, long long v, long long rank)
+{
+    double max_dist = 0;
+
+    for (int i = 0; i < adj_r[v].count; i++)
+    {
+        double u_time;
+        if (adj_r[v].edges[i].speed_limit == 0) {
+            u_time = adj_r[v].edges[i].weight;
+        } else {
+            u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
+        }
+
+        for (int j = 0; j < adj[v].count; j++)
+        {
+            double w_time;
+            if (adj[v].edges[j].speed_limit == 0) {
+                w_time = adj[v].edges[j].weight;
+            } else {
+                w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
+            }
+
+            double through_v = u_time + w_time;
+
+            if (through_v > max_dist)
+            {
+                max_dist = through_v;
+            }
+        }
+    }
+
+    for (int i = 0; i < adj_r[v].count; i++)
+    {
+        long long u = adj_r[v].edges[i].dst_index;
+
+        double u_time;
+        if (adj_r[v].edges[i].speed_limit == 0) {
+            u_time = adj_r[v].edges[i].weight;
+        } else {
+            u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
+        }
+
+        double *dist = local_dijkstra(g, adj, u, v, max_dist);
+
+        for (int j = 0; j < adj[v].count; j++)
+        {
+            long long w = adj[v].edges[j].dst_index;
+
+            double w_time;
+            if (adj[v].edges[j].speed_limit == 0) {
+                w_time = adj[v].edges[j].weight;
+            } else {
+                w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
+            }
+
+            // no path exists from v, add to shortcut
+            if (dist[w] > u_time + w_time)
+            {
+                adjlist_add_edge(&adj[u], w, u_time + w_time, 0);
+                adjlist_add_edge(&adj_r[w], u, u_time + w_time, 0);
+            }
+        }
+
+        free(dist);
+    }
+
+    ch_g->rank[v] = rank;
 }

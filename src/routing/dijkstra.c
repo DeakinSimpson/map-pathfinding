@@ -73,7 +73,6 @@ ResultPath *dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
         return NULL;
     }
 
-
     // setting arrays to their specified values
     for (long long i = 0; i < g->node_count; i++) {
         dist[i] = DBL_MAX;  // sets the distance to DBL_MAX (infinite in theory)

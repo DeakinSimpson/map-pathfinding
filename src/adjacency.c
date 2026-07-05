@@ -66,3 +66,22 @@ void adjlist_free(AdjList *adj, long long node_count) {
 
     free(adj);
 }
+
+void adjlist_add_edge(AdjList *adj, long long dst, double weight, int speed_limit)
+{
+    if (adj->count >= adj->capacity)
+    {
+        if (adj->capacity == 0)
+        {
+            adj->capacity = 2;
+        } else
+        {
+            adj->capacity *= 2;
+        }
+        adj->edges = realloc(adj->edges, adj->capacity * sizeof(AdjEdge));
+    }
+    adj->edges[adj->count].dst_index = dst;
+    adj->edges[adj->count].weight = weight;
+    adj->edges[adj->count].speed_limit = speed_limit;
+    adj->count++;
+}

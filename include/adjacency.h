@@ -20,5 +20,6 @@ typedef struct {
 
 AdjList* adjlist_create(Graph *g, HashMap *map, int reverse);
 void adjlist_free(AdjList *adj, long long node_count);
+void adjlist_add_edge(AdjList *adj, long long dst, double weight, int speed_limit);
 
 #endif
