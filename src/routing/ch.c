@@ -351,3 +351,25 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
 
     return ch_g;
 }
+
+/*
+Query a contraction hierachy
+*/
+
+// Get src and dst indices from hashmap
+
+// Allocate dist_f, dist_r, prev_f, prev_r, visited_f, visited_r arrays
+
+// Create heap_f and heap_r
+
+// Push src onto heap_f and dst onto heap_r
+
+// Alternate between forward and backward search each iteration
+
+// Forward: pop u, only relax edges where ch_g->rank[neighbor] > ch_g->rank[u]
+
+// Backward: same but using adj_r, only relax edges where ch_g->rank[neighbor] > ch_g->rank[u]
+
+// Check meeting point — same as bidirectional A*
+
+// Reconstruct path using prev_f and prev_r
