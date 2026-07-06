@@ -6,7 +6,7 @@
 #include "float.h"
 #include "time.h"
 
-#define HOP_LIMIT 10
+#define HOP_LIMIT 5
 
 // initialises contraction highrachy
 CHGraph *ch_init(Graph *g)
@@ -272,6 +272,7 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
         free(visited);
         free(hops);
         free(dist);
+        free(order_heap);
 
     t = clock() - t;
 
