@@ -6,6 +6,7 @@
 #include "float.h"
 #include "time.h"
 
+#define HOP_LIMIT 20
 
 // initialises contraction highrachy
 CHGraph *ch_init(Graph *g)
@@ -32,32 +33,28 @@ runs a dijkstra from v outwards to max_dist
 static double* local_dijkstra(CHGraph *ch_g, AdjList *adj, long long src, long long skip_node, double max_dist, double *dist, long long *visited, int *hops, MinHeap *heap, long long *touched, int *touched_count)
 {
     // reset dist from previous call
-    for (int i = 0; i < *touched_count; i++) {
+    for (int i = 0; i < *touched_count; i++) 
+    {
         dist[touched[i]] = DBL_MAX;
     }
-    *touched_count = 0;
 
-    heap->size = 0;
-    dist[src] = 0;
-    hops[src] = 0;
+    *touched_count  = 0;
+    heap->size      = 0;
+    dist[src]       = 0;
+    hops[src]       = 0;
     touched[(*touched_count)++] = src;
 
     push(heap, 0, src);
 
-    // long long iter = 0;
     while (heap->size > 0)
     {
-        // iter++;
-        // if (iter % 1000000 == 0) {
-        //     printf("    local_dijkstra iter=%lld heap=%lld\n", iter, heap->size);
-        //     fflush(stdout);
-        // }
         HeapNode  cur_node = pop(heap);
         long long u        = cur_node.nodeIndex;
 
         if (visited[u] == 1) continue;
         if (u == skip_node)  continue;
         if (dist[u] > max_dist) break;
+        if (hops[u] >= HOP_LIMIT) continue;
 
         visited[u] = 1;
 
@@ -231,8 +228,8 @@ static void ch_contract_node(AdjList *adj, AdjList *adj_r, CHGraph *ch_g, long l
             }
 
             if (l_dist[w] > u_time + w_time) {
-                double u_dist = adj_r[v].edges[i].weight;
-                double w_dist = adj[v].edges[j].weight;
+                double u_dist = adj_r[v].edges[i].km_weight;
+                double w_dist = adj[v].edges[j].km_weight;
                 adjlist_add_edge(&adj[u], w, u_time + w_time, u_dist + w_dist, 0);
                 adjlist_add_edge(&adj_r[w], u, u_time + w_time, u_dist + w_dist, 0);
             }
