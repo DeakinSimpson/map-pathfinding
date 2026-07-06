@@ -51,6 +51,7 @@ AdjList* adjlist_create(Graph *g, HashMap *map, int reverse) {
         }
 
         list->edges[list->count].weight = e->weight;
+        list->edges[list->count].km_weight = e->weight;
         list->edges[list->count].speed_limit = e->speed_limit;
         list->edges[list->count].road_type = e->road_type;
         list->count += 1;
@@ -67,13 +68,15 @@ void adjlist_free(AdjList *adj, long long node_count) {
     free(adj);
 }
 
-void adjlist_add_edge(AdjList *adj, long long dst, double weight, int speed_limit)
-{   
+void adjlist_add_edge(AdjList *adj, long long dst, double weight, double km_weight, int speed_limit)
+{
     // check for duplicate edges
     for (long long i = 0; i < adj->count; i++) {
         if (adj->edges[i].dst_index == dst) {
-            if (weight < adj->edges[i].weight)
+            if (weight < adj->edges[i].weight) {
                 adj->edges[i].weight = weight;
+                adj->edges[i].km_weight = km_weight;
+            }
             return;
         }
     }
@@ -91,6 +94,7 @@ void adjlist_add_edge(AdjList *adj, long long dst, double weight, int speed_limi
     }
     adj->edges[adj->count].dst_index = dst;
     adj->edges[adj->count].weight = weight;
+    adj->edges[adj->count].km_weight = km_weight;
     adj->edges[adj->count].speed_limit = speed_limit;
     adj->count++;
 }

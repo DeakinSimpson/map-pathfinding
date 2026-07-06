@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
     AdjList     *adj        = adjlist_create(g, map, 0);
     AdjList     *adj_r      = adjlist_create(g, map, 1);
     RTree       *tree       = rtree_build(g);
+    CHGraph     *ch_g       = ch_build(g, adj, adj_r);
     t = clock() - t;
     printf("Variables Loaded in %fs\n\n", ((double)t / CLOCKS_PER_SEC));
 
@@ -50,11 +51,8 @@ int main(int argc, char* argv[]) {
     ResultPath *astar_reverse_rp = astar_bidir(g, adj, adj_r, map, g->nodes[src_index].id, g->nodes[dst_index].id);
     utils_print_results(astar_reverse_rp);
 
-    // ch testing
-    CHGraph *ch_g = ch_build(g, adj, adj_r);
-    if (ch_g != NULL) {
-        printf("success\n");
-    }
+    ResultPath *ch_rp = ch_query(g, ch_g, adj, adj_r, map, g->nodes[src_index].id, g->nodes[dst_index].id);
+    utils_print_results(ch_rp);
 
     // freeing variables
     adjlist_free(adj, g->node_count);
