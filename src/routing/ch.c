@@ -6,7 +6,7 @@
 #include "float.h"
 #include "time.h"
 
-#define HOP_LIMIT 20
+#define HOP_LIMIT 10
 
 // initialises contraction highrachy
 CHGraph *ch_init(Graph *g)
@@ -147,42 +147,6 @@ static int edge_difference(CHGraph *ch_g, AdjList *adj, AdjList *adj_r, long lon
     return shortcuts - edges_removed;
 }
 
-static int compare_scores(const void *a, const void *b)
-{
-    NodeScore *na = (NodeScore*)a;
-    NodeScore *nb = (NodeScore*)b;
-
-    return na->score - nb->score;
-}
-
-// orderes the nodes based on there scores
-static long long *ch_ordered_nodes(CHGraph *ch_g, Graph *g, AdjList *adj, AdjList *adj_r, double *dist, long long *visited, int *hops, MinHeap *heap, long long *touched, int *touched_count)
-{
-    NodeScore *node_scores = malloc(g->node_count * sizeof(NodeScore));
-    if (node_scores == NULL) return NULL;
-
-    for (int i = 0; i < g->node_count; i++)
-    {
-        node_scores[i].index = i;
-        node_scores[i].score = edge_difference(ch_g, adj, adj_r, i, dist, visited, hops, heap, touched, touched_count);
-    }
-
-    qsort(node_scores, g->node_count, sizeof(NodeScore), compare_scores);
-
-    long long *result = malloc(g->node_count * sizeof(long long));
-
-    if (result == NULL) {free(node_scores); return NULL;}
-
-    for (int i = 0; i < g->node_count; i++)
-    {
-        result[i] = node_scores[i].index;
-    }
-
-    free(node_scores);
-
-    return result;
-}
-
 static void ch_contract_node(AdjList *adj, AdjList *adj_r, CHGraph *ch_g, long long v, long long rank, double *dist, long long *visited, int *hops, MinHeap *heap, long long *touched, int *touched_count)
 {
     long long incoming_count = adj_r[v].count;
@@ -247,7 +211,6 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
     int         *hops       = NULL;
     MinHeap     *heap       = NULL;
     long long   *touched    = NULL;
-    long long   *order      = NULL;
 
     // initialise variables
     clock_t t = clock();
@@ -278,17 +241,32 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
         hops[i]    = INT_MAX;
     }
 
-    order = ch_ordered_nodes(ch_g, g, adj, adj_r, dist, visited, hops, heap, touched, &touched_count);
-    if (!order) goto cleanup;
+    MinHeap *order_heap = createHeap(g->node_count);
 
-    for (long long i = 0; i < g->node_count; i++)
-    {
-        long long v = order[i];
-        ch_contract_node(adj, adj_r, ch_g, v, i, dist, visited, hops, heap, touched, &touched_count);
+    // initial scoring — push onto order_heap
+    for (long long i = 0; i < g->node_count; i++) {
+        int score = edge_difference(ch_g, adj, adj_r, i, dist, visited, hops, heap, touched, &touched_count);
+        push(order_heap, (double)score, i);
+    }
+
+    long long rank = 0;
+    while (order_heap->size > 0) {
+        HeapNode cur = pop(order_heap);
+        long long v  = cur.nodeIndex;
+
+        if (ch_g->rank[v] != -1) continue;
+
+        int new_score = edge_difference(ch_g, adj, adj_r, v, dist, visited, hops, heap, touched, &touched_count);
+        if ((double)new_score > cur.dist) {
+            push(order_heap, (double)new_score, v);
+            continue;
+        }
+
+        ch_contract_node(adj, adj_r, ch_g, v, rank, dist, visited, hops, heap, touched, &touched_count);
+        rank++;
     }
 
     cleanup:
-        free(order);
         free(touched);
         freeHeap(heap);
         free(visited);

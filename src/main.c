@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
     AdjList     *adj        = adjlist_create(g, map, 0);
     AdjList     *adj_r      = adjlist_create(g, map, 1);
     RTree       *tree       = rtree_build(g);
+    printf("Number of nodes: %lld, edges %lld\n", g->node_count, g->edge_count);
     CHGraph     *ch_g       = ch_build(g, adj, adj_r);
     t = clock() - t;
     printf("Variables Loaded in %fs\n\n", ((double)t / CLOCKS_PER_SEC));

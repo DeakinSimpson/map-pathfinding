@@ -70,17 +70,6 @@ void adjlist_free(AdjList *adj, long long node_count) {
 
 void adjlist_add_edge(AdjList *adj, long long dst, double weight, double km_weight, int speed_limit)
 {
-    // check for duplicate edges
-    for (long long i = 0; i < adj->count; i++) {
-        if (adj->edges[i].dst_index == dst) {
-            if (weight < adj->edges[i].weight) {
-                adj->edges[i].weight = weight;
-                adj->edges[i].km_weight = km_weight;
-            }
-            return;
-        }
-    }
-
     if (adj->count >= adj->capacity)
     {
         if (adj->capacity == 0)
