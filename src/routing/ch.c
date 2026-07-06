@@ -221,7 +221,6 @@ static long long *ch_ordered_nodes(CHGraph *ch_g, Graph *g, AdjList *adj, AdjLis
 
 static void ch_contract_node(AdjList *adj, AdjList *adj_r, CHGraph *ch_g, long long v, long long rank, double *dist, long long *visited, int *hops, MinHeap *heap)
 {
-    printf("contracting v=%lld, incoming=%lld, outgoing=%lld\n", v, adj_r[v].count, adj[v].count);
     double max_dist = 0;
     long long incoming_count = adj_r[v].count;
     long long outgoing_count = adj[v].count;
@@ -337,7 +336,6 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
 
     for (long long i = 0; i < g->node_count; i++)
     {   
-        printf("contracting %lld / %lld nodes", i, g->node_count);
         long long v = order[i];
         ch_contract_node(adj, adj_r, ch_g, v, i, dist, visited, hops, heap);
     }
