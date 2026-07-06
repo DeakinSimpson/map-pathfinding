@@ -6,7 +6,8 @@
 #include "float.h"
 #include "time.h"
 
-#define HOP_LIMIT 5
+#define HOP_LIMIT 3
+#define TOUCHED_SIZE 4096
 
 // initialises contraction highrachy
 CHGraph *ch_init(Graph *g)
@@ -30,34 +31,14 @@ CHGraph *ch_init(Graph *g)
 /*
 runs a dijkstra from v outwards to max_dist
 */
-static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long skip_node, double max_dist)
-{
-    double      *dist;
-    long long   *visited;
-    int         *hops;
-    MinHeap     *heap;
+static double* local_dijkstra(CHGraph *ch_g, AdjList *adj, long long src, long long skip_node, double max_dist, double *dist, long long *visited, int *hops, MinHeap *heap)
+{   
+    long long touched[TOUCHED_SIZE];
+    int touched_index = 0;
 
-    dist = malloc(g->node_count * sizeof(double));
-    if (dist == NULL) {free(dist); return NULL;}
-
-    visited = malloc(g->node_count * sizeof(long long));
-    if (visited == NULL) {free(dist); free(visited); return NULL;}
-
-    hops = malloc(g->node_count * sizeof(int));
-    if (hops == NULL) {free(dist); free(visited); free(hops); return NULL;}
-
-    for (long long i = 0; i < g->node_count; i++)
-    {
-        dist[i] = DBL_MAX;
-        visited[i] = 0;
-        hops[i] = INT_MAX;
-    }
-
+    heap->size = 0;
     dist[src] = 0;
     hops[src] = 0;
-
-    heap = createHeap(1024);
-    if (heap == NULL) {free(dist); free(visited); free(hops); return NULL;}
 
     push(heap, 0, src);
 
@@ -69,11 +50,18 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
         cur_node = pop(heap);
         u = cur_node.nodeIndex;
 
+        // printf("  running witness search from u=%lld\n", u);
+        // fflush(stdout);
+
         if (visited[u] == 1) {continue;}
         if (u == skip_node) {continue;}
         if (hops[u] >= HOP_LIMIT) {continue;}
 
         visited[u] = 1;
+
+        if (touched_index < TOUCHED_SIZE) {
+            touched[touched_index++] = u;
+        }
 
         if (dist[u] > max_dist) break;
 
@@ -85,6 +73,8 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
 
             v = adj[u].edges[i].dst_index;
             if (v == -1 || visited[v] == 1) {continue;}
+
+            if (v == -1 || visited[v] == 1 || ch_g->rank[v] != -1) {continue;}
 
             if (adj[u].edges[i].speed_limit == 0) {
                 time = adj[u].edges[i].weight;
@@ -103,17 +93,20 @@ static double* local_dijkstra(Graph *g, AdjList *adj, long long src, long long s
         }
     }
 
-    freeHeap(heap);
-    free(visited);
-    free(hops);
-    
+    for (long long i = 0; i < touched_index; i++)
+    {
+        dist[touched[i]] = DBL_MAX;
+        visited[touched[i]] = 0;
+        hops[touched[i]] = INT_MAX;
+    }
+
     return dist;
 }
 
 /*
 Gets the number of shortcuts between nodes that can be made if v was removed
 */
-static int edge_difference(Graph *g, AdjList *adj, AdjList *adj_r, long long v)
+static int edge_difference(CHGraph *ch_g, AdjList *adj, AdjList *adj_r, long long v, double *dist, long long *visited, int *hops, MinHeap *heap)
 {
     double max_dist = 0.0;   
 
@@ -150,7 +143,7 @@ static int edge_difference(Graph *g, AdjList *adj, AdjList *adj_r, long long v)
     for (int i = 0; i < adj_r[v].count; i++) 
     {
         long long u;
-        double *dist;
+        double *l_dist;
 
         u = adj_r[v].edges[i].dst_index;
 
@@ -162,7 +155,7 @@ static int edge_difference(Graph *g, AdjList *adj, AdjList *adj_r, long long v)
             u_time = adj_r[v].edges[i].weight / u_speed_ms;
         }
 
-        dist = local_dijkstra(g, adj, u, v, max_dist);
+        l_dist = local_dijkstra(ch_g, adj, u, v, max_dist, dist, visited, hops, heap);
 
         for (int j = 0; j < adj[v].count; j++)
         {
@@ -178,13 +171,11 @@ static int edge_difference(Graph *g, AdjList *adj, AdjList *adj_r, long long v)
                 w_time = adj[v].edges[j].weight / w_speed_ms;
             }
 
-            if (dist[w] > u_time + w_time)
+            if (l_dist[w] > u_time + w_time)
             {
                 shortcuts++;
             }
         }
-
-        free(dist);
     }
 
     int edges_removed = adj_r[v].count + adj[v].count;
@@ -201,7 +192,7 @@ static int compare_scores(const void *a, const void *b)
 }
 
 // orderes the nodes based on there scores
-static long long *ch_ordered_nodes(Graph *g, AdjList *adj, AdjList *adj_r)
+static long long *ch_ordered_nodes(CHGraph *ch_g, Graph *g, AdjList *adj, AdjList *adj_r, double *dist, long long *visited, int *hops, MinHeap *heap)
 {
     NodeScore *node_scores = malloc(g->node_count * sizeof(NodeScore));
     if (node_scores == NULL) return NULL;
@@ -209,7 +200,7 @@ static long long *ch_ordered_nodes(Graph *g, AdjList *adj, AdjList *adj_r)
     for (int i = 0; i < g->node_count; i++)
     {
         node_scores[i].index = i;
-        node_scores[i].score = edge_difference(g, adj, adj_r, i);
+        node_scores[i].score = edge_difference(ch_g, adj, adj_r, i, dist, visited, hops, heap);
     }
 
     qsort(node_scores, g->node_count, sizeof(NodeScore), compare_scores);
@@ -228,22 +219,33 @@ static long long *ch_ordered_nodes(Graph *g, AdjList *adj, AdjList *adj_r)
     return result;
 }
 
-static void ch_contract_node(Graph *g, AdjList *adj, AdjList *adj_r, CHGraph *ch_g, long long v, long long rank)
+static void ch_contract_node(AdjList *adj, AdjList *adj_r, CHGraph *ch_g, long long v, long long rank, double *dist, long long *visited, int *hops, MinHeap *heap)
 {
+    printf("contracting v=%lld, incoming=%lld, outgoing=%lld\n", v, adj_r[v].count, adj[v].count);
     double max_dist = 0;
+    long long incoming_count = adj_r[v].count;
+    long long outgoing_count = adj[v].count;
 
-    for (int i = 0; i < adj_r[v].count; i++)
-    {
+    for (int i = 0; i < incoming_count; i++)
+    {   
+        long long u = adj_r[v].edges[i].dst_index;
+        if (u == -1 || u == v || ch_g->rank[u] != -1) continue;
+
         double u_time;
+
         if (adj_r[v].edges[i].speed_limit == 0) {
             u_time = adj_r[v].edges[i].weight;
         } else {
             u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
         }
 
-        for (int j = 0; j < adj[v].count; j++)
+        for (int j = 0; j < outgoing_count; j++)
         {
+            long long w = adj[v].edges[j].dst_index;
+            if (w == -1 || w == v || w == u || ch_g->rank[w] != -1) continue;  // skip already contracted
+
             double w_time;
+
             if (adj[v].edges[j].speed_limit == 0) {
                 w_time = adj[v].edges[j].weight;
             } else {
@@ -259,9 +261,10 @@ static void ch_contract_node(Graph *g, AdjList *adj, AdjList *adj_r, CHGraph *ch
         }
     }
 
-    for (int i = 0; i < adj_r[v].count; i++)
+    for (int i = 0; i < incoming_count; i++)
     {
         long long u = adj_r[v].edges[i].dst_index;
+        if (u == -1 || u == v || ch_g->rank[u] != -1) continue;
 
         double u_time;
         if (adj_r[v].edges[i].speed_limit == 0) {
@@ -270,11 +273,13 @@ static void ch_contract_node(Graph *g, AdjList *adj, AdjList *adj_r, CHGraph *ch
             u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
         }
 
-        double *dist = local_dijkstra(g, adj, u, v, max_dist);
+        double *l_dist = local_dijkstra(ch_g, adj, u, v, max_dist, dist, visited, hops, heap);
 
-        for (int j = 0; j < adj[v].count; j++)
+        for (int j = 0; j < outgoing_count; j++)
         {
             long long w = adj[v].edges[j].dst_index;
+
+            if (w == -1 || w == v || w == u || ch_g->rank[w] != -1) continue;
 
             double w_time;
             if (adj[v].edges[j].speed_limit == 0) {
@@ -284,14 +289,12 @@ static void ch_contract_node(Graph *g, AdjList *adj, AdjList *adj_r, CHGraph *ch
             }
 
             // no path exists from v, add to shortcut
-            if (dist[w] > u_time + w_time)
+            if (l_dist[w] > u_time + w_time)
             {
                 adjlist_add_edge(&adj[u], w, u_time + w_time, 0);
                 adjlist_add_edge(&adj_r[w], u, u_time + w_time, 0);
             }
         }
-
-        free(dist);
     }
 
     ch_g->rank[v] = rank;
@@ -299,19 +302,50 @@ static void ch_contract_node(Graph *g, AdjList *adj, AdjList *adj_r, CHGraph *ch
 
 CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
 {
+    printf("starting ch_build\n");
     clock_t t = clock();
 
     CHGraph *ch_g = ch_init(g);
 
-    long long *order = ch_ordered_nodes(g, adj, adj_r);
+    double *dist;
+    long long *visited;
+    int *hops; MinHeap *heap;
 
-    for (int i = 0; i < g->node_count; i++)
+    dist = malloc(g->node_count * sizeof(double));
+    if (dist == NULL) {free(dist); return NULL;}
+
+    visited = malloc(g->node_count * sizeof(long long));
+    if (visited == NULL) {free(dist); free(visited); return NULL;}
+
+    hops = malloc(g->node_count * sizeof(int));
+    if (hops == NULL) {free(dist); free(visited); free(hops); return NULL;}
+
+    heap = createHeap(1024);
+    if (heap == NULL) {free(dist); free(visited); free(hops); return NULL;}
+
+    for (long long i = 0; i < g->node_count; i++)
     {
+        dist[i] = DBL_MAX;
+        visited[i] = 0;
+        hops[i] = INT_MAX;
+    }
+
+    printf("allocating memory\n");
+
+    long long *order = ch_ordered_nodes(ch_g, g, adj, adj_r, dist, visited, hops, heap);
+    printf("ordered nodes\n");
+
+    for (long long i = 0; i < g->node_count; i++)
+    {   
+        printf("contracting %lld / %lld nodes", i, g->node_count);
         long long v = order[i];
-        ch_contract_node(g, adj, adj_r, ch_g, v, i);
+        ch_contract_node(adj, adj_r, ch_g, v, i, dist, visited, hops, heap);
     }
 
     free(order);
+    freeHeap(heap);
+    free(visited);
+    free(hops);
 
     t = clock() - t;
 
