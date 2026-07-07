@@ -20,77 +20,41 @@ double heuristic(Coordinate a, Coordinate b) {
 
 ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id) {
     clock_t t = clock();
+    long long src_index = -1;
+    long long dst_index = -1;
+    double *dist = NULL;
+    long long *prev = NULL;
+    long long* visited = NULL;
+    double *km_dist = NULL;
+    MinHeap *heap = NULL;
+    ResultPath *result = NULL;
 
     // get source index from node id
-    long long src_index = hashmap_get(map, src_id);
-
-    if (src_index == -1)
-    {
-        printf("failed to get index for src\n");
-
-        return NULL;
-    }
+    src_index = hashmap_get(map, src_id);
+    if (src_index == -1) goto cleanup;
 
     // get destination index from node id
-    long long dst_index = hashmap_get(map, dst_id);
-
-    if (dst_index == -1)
-    {
-        printf("failed to get index for dst");
-        
-        return NULL;
-    }
+    dst_index = hashmap_get(map, dst_id);
+    if (dst_index == -1) goto cleanup;
 
     // allocate dist array (size node_count), set all to DBL_MAX
-    double *dist = malloc(g->node_count * sizeof(double));
-
-    if (dist == NULL) {
-        printf("failed to allocate memory for dist");
-
-        free(dist);
-
-        return NULL;
-    }
+    dist = malloc(g->node_count * sizeof(double));
+    if (!dist) goto cleanup;
 
     // allocate prev array (size node_count), set all to -1
-    long long *prev = malloc(g->node_count * sizeof(long long));
-
-    if (prev == NULL)
-    {
-        printf("failed to allocate memory for prev");
-
-        free(prev);
-        free(dist);
-
-        return NULL;
-    }
+    prev = malloc(g->node_count * sizeof(long long));
+    if (!prev) goto cleanup;
 
     // allocate visited array (size node_count), set all to 0
-    long long* visited = malloc(g->node_count * sizeof(long long));
+    visited = malloc(g->node_count * sizeof(long long));
+    if (!visited) goto cleanup;
 
-    if (visited == NULL)
-    {
-        printf("failed to allocate memory for visited");
+    km_dist = malloc(g->node_count * sizeof(double));
+    if (!km_dist) goto cleanup;
 
-        free(prev);
-        free(dist);
-        free(visited);
-
-        return NULL;
-    }
-
-    double *km_dist = malloc(g->node_count * sizeof(double));
-
-    if (km_dist == NULL)
-    {
-        printf("failed to allocate memory for km_dist");
-
-        free(prev);
-        free(dist);
-        free(visited);
-
-        return NULL;
-    }
+    // create heap and push src with distance 0
+    heap = createHeap(1024);
+    if (!heap) goto cleanup;
 
 
     // setting arrays to their specified values
@@ -105,22 +69,6 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
     // set dist[src_index] = 0
     dist[src_index] = 0;
     km_dist[src_index] = 0;
-
-    // create heap and push src with distance 0
-    MinHeap *heap = createHeap(1024);
-
-    if (heap == NULL)
-    {
-        printf("failed to create heap");
-        
-        freeHeap(heap);
-        free(prev);
-        free(dist);
-        free(visited);        
-
-        return NULL;
-    }
-
     push(heap, 0, src_index);
     
     // while heap is not empty:
@@ -131,19 +79,9 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
         long long u = cur_node.nodeIndex;
 
         // if visited[u] skip
-        if (visited[u] == 1)
-        {
-            continue;
-        }
-
-        // mark visited[u] = 1
-        visited[u] = 1;
-
-        // if u == dst_index break early 
-        if (u == dst_index)
-        {
-            break;
-        }
+        if (visited[u] == 1) continue;
+        visited[u] = 1; // mark visited[u] = 1
+        if (u == dst_index) break; // if u == dst_index break early 
 
         AdjList *neighbors = &adj[u];
         // loop through all neighbours of u in adj[u]:
@@ -153,10 +91,7 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
             long long v = neighbors->edges[i].dst_index;;
 
             // if visited[v] skip
-            if (v == -1 || visited[v] == 1)
-            {
-                continue;
-            }
+            if (v == -1 || visited[v] == 1) continue;
 
             // calculate alternative distance = dist[u] + edge weight
             double speed_ms = neighbors->edges[i].speed_limit / 3.6;
@@ -183,17 +118,7 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
         }
     }
 
-    if (dist[dst_index] == DBL_MAX)
-    {
-        printf("no path found between src and dst\n");
-
-        freeHeap(heap);
-        free(prev);
-        free(dist);
-        free(visited);
-        
-        return NULL;
-    }
+    if (dist[dst_index] == DBL_MAX) goto cleanup;
 
     // reconstruct path by walking prev[] from dst back to src
     long long *path = malloc(g->node_count * sizeof(long long));
@@ -219,7 +144,7 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
     // return path
     t = clock() - t;
 
-    ResultPath *result = malloc(sizeof(ResultPath));
+    result = malloc(sizeof(ResultPath));
     result->name = "A*";
     result->path_inx = path;
     result->time_in_seconds = dist[dst_index];
@@ -227,155 +152,62 @@ ResultPath* astar(Graph *g, AdjList *adj, HashMap *map, long long src_id, long l
     result->load_time_in_seconds = ((double)t / CLOCKS_PER_SEC);
 
     // free dist, visited, heap
-    freeHeap(heap);
-    free(prev);
-    free(dist);
-    free(visited);
+    cleanup:
+        freeHeap(heap);
+        free(prev);
+        free(dist);
+        free(visited);
 
     return result;
 }
 
 ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, long long src_id, long long dst_id) {
     clock_t t = clock();
-
+    long long   src_index   = -1;   long long   dst_index   = -1;
+    double      *dist_f     = NULL; double      *dist_r     = NULL;
+    long long   *prev_f     = NULL; long long   *prev_r     = NULL;
+    long long   *visited_f  = NULL; long long   *visited_r  = NULL;
+    double      *km_dist_f  = NULL; double      *km_dist_r  = NULL;
+    MinHeap     *heap_f     = NULL; MinHeap     *heap_r     = NULL;
+    long long   *path_f     = NULL; long long   *path_r     = NULL;
+    long long   *path       = NULL;
+    ResultPath  *result     = NULL;
 
     // get source index from node id
-    long long src_index = hashmap_get(map, src_id);
-
-    if (src_index == -1)
-    {
-        printf("failed to get index for src\n");
-
-        return NULL;
-    }
+    src_index = hashmap_get(map, src_id);
+    if (src_index == -1) goto cleanup;
 
     // get destination index from node id
-    long long dst_index = hashmap_get(map, dst_id);
-
-    if (dst_index == -1)
-    {
-        printf("failed to get index for dst");
-        
-        return NULL;
-    }
+    dst_index = hashmap_get(map, dst_id);
+    if (dst_index == -1) goto cleanup;
 
     // allocate dist array (size node_count), set all to DBL_MAX
-    double *dist_f = malloc(g->node_count * sizeof(double));
+    dist_f = malloc(g->node_count * sizeof(double));
+    if (!dist_f) goto cleanup;
 
-    if (dist_f == NULL) {
-        printf("failed to allocate memory for dist");
-
-        free(dist_f);
-
-        return NULL;
-    }
-
-    double *dist_r = malloc(g->node_count * sizeof(double));
-
-    if (dist_r == NULL) {
-        printf("failed to allocate memory for dist");
-
-        free(dist_r);
-        free(dist_f);
-
-        return NULL;
-    }    
+    dist_r = malloc(g->node_count * sizeof(double));
+    if (!dist_r) goto cleanup;
 
     // allocate prev array (size node_count), set all to -1
-    long long *prev_f = malloc(g->node_count * sizeof(long long));
+    prev_f = malloc(g->node_count * sizeof(long long));
+    if (!prev_f) goto cleanup;
 
-    if (prev_f == NULL)
-    {
-        printf("failed to allocate memory for prev");
-
-        free(prev_f);
-        free(dist_f);
-        free(dist_r);
-
-        return NULL;
-    }
-
-    long long *prev_r = malloc(g->node_count * sizeof(long long));
-
-    if (prev_r == NULL)
-    {
-        printf("failed to allocate memory for prev");
-
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-
-        return NULL;
-    }
+    prev_r = malloc(g->node_count * sizeof(long long));
+    if (!prev_r) goto cleanup;
 
     // allocate visited array (size node_count), set all to 0
-    long long* visited_f = malloc(g->node_count * sizeof(long long));
+    visited_f = malloc(g->node_count * sizeof(long long));
+    if (!visited_f) goto cleanup;
 
-    if (visited_f == NULL)
-    {
-        printf("failed to allocate memory for visited");
-
-        free(visited_f);
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-
-        return NULL;
-    }
-
-    long long* visited_r = malloc(g->node_count * sizeof(long long));
-
-    if (visited_r == NULL)
-    {
-        printf("failed to allocate memory for visited");
-
-        free(visited_f);
-        free(visited_r);
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-
-        return NULL;
-    }
+    visited_r = malloc(g->node_count * sizeof(long long));
+    if (!visited_r) goto cleanup;
 
 
-    double *km_dist_f = malloc(g->node_count * sizeof(double));
+    km_dist_f = malloc(g->node_count * sizeof(double));
+    if (!km_dist_f) goto cleanup;
 
-    if (km_dist_f == NULL)
-    {
-        printf("failed to allocate memory for km_dist");
-
-        free(km_dist_f);
-        free(visited_f);
-        free(visited_r);
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-
-        return NULL;
-    }
-
-    double *km_dist_r = malloc(g->node_count * sizeof(double));
-
-    if (km_dist_r == NULL)
-    {
-        printf("failed to allocate memory for km_dist");
-
-        free(km_dist_f);
-        free(km_dist_r);
-        free(visited_f);
-        free(visited_r);
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-
-        return NULL;
-    }    
+    km_dist_r = malloc(g->node_count * sizeof(double));
+    if (!km_dist_r) goto cleanup;
 
 
     // setting arrays to their specified values
@@ -398,41 +230,11 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
 
 
     // create heap and push src with distance 0
-    MinHeap *heap_f = createHeap(1024);
+    heap_f = createHeap(1024);
+    if (!heap_f) goto cleanup;
 
-    if (heap_f == NULL)
-    {
-        printf("failed to create heap");
-        
-        free(km_dist_f);
-        free(km_dist_r);
-        free(visited_f);
-        free(visited_r);
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-
-        return NULL;
-    }
-
-    MinHeap *heap_r = createHeap(1024);
-
-    if (heap_r == NULL)
-    {
-        printf("failed to create heap");
-        
-        free(km_dist_f);
-        free(km_dist_r);
-        free(visited_f);
-        free(visited_r);
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-
-        return NULL;
-    }
+    heap_r = createHeap(1024);
+    if (!heap_r) goto cleanup;
 
     push(heap_f, 0, src_index);
     push(heap_r, 0, dst_index);
@@ -545,43 +347,10 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
         }
     }
 
-    if (best_meeting == -1)
-    {
-        printf("no path found\n");
-        
-        free(km_dist_f);
-        free(km_dist_r);
-        free(visited_f);
-        free(visited_r);
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-        freeHeap(heap_f);
-        freeHeap(heap_r);
+    if (best_meeting == -1) goto cleanup;
 
-        return NULL;
-    }
-
-    long long *path_f = malloc(g->node_count * sizeof(long long));
-
-    if (path_f == NULL) {
-        printf("failed to allocate memory for path_r\n");
-
-        free(km_dist_f);
-        free(km_dist_r);
-        free(visited_f);
-        free(visited_r);
-        free(prev_f);
-        free(prev_r);
-        free(dist_f);
-        free(dist_r);
-        free(path_f);
-        freeHeap(heap_f);
-        freeHeap(heap_r);
-
-        return NULL;
-    }
+    path_f = malloc(g->node_count * sizeof(long long));
+    if (!path_f) goto cleanup;
 
     long long len_f = 0;
     long long cur = best_meeting;
@@ -598,24 +367,8 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
     }
 
     // walk from best meeting to dst
-    long long *path_r = malloc(g->node_count * sizeof(long long));
-
-    if (path_r == NULL) {
-        printf("failed to allocate memory for path_r\n");
-
-        freeHeap(heap_f);
-        freeHeap(heap_r);
-        free(dist_f);
-        free(dist_r);
-        free(prev_f);
-        free(prev_r);
-        free(visited_f);
-        free(visited_r);
-        free(km_dist_f);
-        free(km_dist_r);
-
-        return NULL;
-    }
+    path_r = malloc(g->node_count * sizeof(long long));
+    if (!path_r) goto cleanup;
 
     long long len_r = 0;
     cur = prev_r[best_meeting];  // skip best_meeting, already in path_f
@@ -626,59 +379,30 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
 
     // combine into one path
     long long total = len_f + len_r;
-    long long *path = malloc(total * sizeof(long long));
 
-    if (path == NULL) {
-        printf("failed to allocate memory for path\n");
+    // create final path
+    path = malloc(total * sizeof(long long));
+    if (!path) goto cleanup;
 
-        freeHeap(heap_f);
-        freeHeap(heap_r);
-        free(dist_f);
-        free(dist_r);
-        free(prev_f);
-        free(prev_r);
-        free(visited_f);
-        free(visited_r);
-        free(km_dist_f);
-        free(km_dist_r);
-
-        return NULL;
-    }
-
+    // the first half of path is the path forward
     for (long long j = 0; j < len_f; j++) 
     {
         path[j] = path_f[j];
     }
     
+    // the second half of the path is the reverse path
     for (long long j = 0; j < len_r; j++)
     {
         path[len_f + j] = path_r[j];
     }
 
-
-
-    ResultPath *result = malloc(sizeof(ResultPath));
-
-    if (result == NULL)
-    {
-        printf("failed to allocate memory for result");
-
-        freeHeap(heap_f);
-        freeHeap(heap_r);
-        free(dist_f);
-        free(dist_r);
-        free(prev_f);
-        free(prev_r);
-        free(visited_f);
-        free(visited_r);
-        free(km_dist_f);
-        free(km_dist_r);
-
-        return NULL;
-    }
+    // allocate memory for result
+    result = malloc(sizeof(ResultPath));
+    if (!result) goto cleanup;
 
     t = clock() - t;
 
+    // assign result variables
     result->name = "Bi-Directional A*";
     result->path_inx = path;
     result->time_in_seconds = best_cost;
@@ -686,18 +410,19 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
     result->load_time_in_seconds = ((double)t / CLOCKS_PER_SEC);
 
     // free memory
-    freeHeap(heap_f);
-    freeHeap(heap_r);
-    free(dist_f);
-    free(dist_r);
-    free(prev_f);
-    free(prev_r);
-    free(visited_f);
-    free(visited_r);
-    free(km_dist_f);
-    free(km_dist_r);
-    free(path_f);
-    free(path_r);
+    cleanup:
+        freeHeap(heap_f);
+        freeHeap(heap_r);
+        free(dist_f);
+        free(dist_r);
+        free(prev_f);
+        free(prev_r);
+        free(visited_f);
+        free(visited_r);
+        free(km_dist_f);
+        free(km_dist_r);
+        free(path_f);
+        free(path_r);
 
     return result;    
 }
