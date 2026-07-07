@@ -7,21 +7,18 @@
 AdjList* adjlist_create(Graph *g, HashMap *map, int reverse) {
     // allocate an adjacency list per node
     AdjList *adj = calloc(g->node_count, sizeof(AdjList));
-
-    if (adj == NULL) {
-        printf("Failed to allocate memory for adj\n");
-        free(adj);
-        return NULL;
-    }
+    if (!adj) adjlist_free(adj); return NULL;
 
     for (long long i = 0; i < g->edge_count; i++) {
         Edge *e = &g->edges[i];
 
         // convert the OSM id into hashmap index
         long long src_index;
-        if (reverse == 1) {
+        if (reverse == 1)
+        {
             src_index = hashmap_get(map, e->dst);
-        } else {
+        } else
+        {
             src_index = hashmap_get(map, e->src);
         }
 
@@ -32,7 +29,7 @@ AdjList* adjlist_create(Graph *g, HashMap *map, int reverse) {
 
         AdjList *list = &adj[src_index];
 
-        // grop the list capacity if needed
+        // increase the list capacity if needed
         if (list->count >= list->capacity) {
             if (list->capacity == 0) {
                 list->capacity = 2;
