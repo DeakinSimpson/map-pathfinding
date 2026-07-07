@@ -47,7 +47,6 @@ int main(int argc, char* argv[]) {
 
     if (ch_g) {
         loaded_from_cache = 1;
-        printf("Loaded cached contraction hierarchy from %s\n", cache_path);
     } else {
         t_stage = clock();
         adj   = adjlist_create(g, map, 0);
@@ -65,10 +64,10 @@ int main(int argc, char* argv[]) {
     RTree *tree = rtree_build(g);
     printf("rtree_build:          %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
 
-    printf("Number of nodes: %lld, edges %lld\n", g->node_count, g->edge_count);
-
     t_total = clock() - t_total;
-    printf("Variables Loaded in %fs\n\n", ((double)t_total / CLOCKS_PER_SEC));
+    printf("Variables Loaded in   %fs\n\n", ((double)t_total / CLOCKS_PER_SEC));
+
+    printf("Number of nodes: %lld, edges %lld\n", g->node_count, g->edge_count);
 
     // get indexes
     long long src_index;

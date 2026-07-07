@@ -184,7 +184,21 @@ RTree* rtree_build(Graph *g)
 
     this results in the total number of slices needed to get a balances tree
     */
+    RTree *tree = NULL;
+
     long long total_leaves = (g->node_count + MAX_CHILDREN - 1) / MAX_CHILDREN;
+
+    long long total_nodes = total_leaves;
+    long long level_count = total_leaves;
+    while (level_count > 1)
+    {
+        level_count = (level_count + MAX_CHILDREN -1) / MAX_CHILDREN;
+        total_nodes += level_count;
+    }
+
+    RTreeNode *pool = malloc(total_nodes * sizeof(RTreeNode));
+    long long pool_used = 0;
+
     long long num_slice = (long long)ceil(sqrt((double)total_leaves));
     long long slice_size = num_slice * MAX_CHILDREN;
     
@@ -215,13 +229,7 @@ RTree* rtree_build(Graph *g)
         */
         long long num_of_leaves = (end - start + MAX_CHILDREN - 1) / MAX_CHILDREN;
         for (long long leaf = 0; leaf < num_of_leaves; leaf++) {
-            RTreeNode *cur_leaf = malloc(sizeof(RTreeNode));
-
-            if (cur_leaf == NULL) {
-                printf("Could not allocate memory for cur_leaf");
-                free(cur_leaf);
-                return NULL;
-            }
+            RTreeNode *cur_leaf = &pool[pool_used++];
 
             cur_leaf->is_leaf = 1;
 
@@ -270,15 +278,7 @@ RTree* rtree_build(Graph *g)
         }
 
         for (long long i = 0; i < new_count; i++) {
-            RTreeNode *internal_node = malloc(sizeof(RTreeNode));
-
-            if (internal_node == NULL) {
-                printf("failed to allocate memory for internal_node\n");
-                free(new_level);
-                free(indicies);
-                free(cur_level);
-                return NULL;
-            }
+            RTreeNode *internal_node = &pool[pool_used++];
 
             internal_node->is_leaf = 0;
             internal_node->children_count = 0;
@@ -301,20 +301,16 @@ RTree* rtree_build(Graph *g)
         leaf_level_count = new_count;
     }
 
-    RTree *tree = malloc(sizeof(RTree));
-
-    if (tree == NULL) {
-        printf("failed to allocate memory for tree\n");
-        free(indicies);
-        free(cur_level);
-        return NULL;
-    }
+    tree = malloc(sizeof(RTree));
+    if (!tree) goto cleanup;
 
     tree->root = cur_level[0];
     tree->size = g->node_count;
+    tree->pool = pool;
 
-    free(indicies);
-    free(cur_level);
+    cleanup:
+        free(indicies);
+        free(cur_level);
 
     return tree;
 }
@@ -413,7 +409,6 @@ void rtree_free_node(RTreeNode *node) {
 
 // free entire rtree recursively
 void rtree_free(RTree *rtree) {
-    rtree_free_node(rtree->root);
-
+    rtree_free_node(rtree->pool);
     free(rtree);
 }

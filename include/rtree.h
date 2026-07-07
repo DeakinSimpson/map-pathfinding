@@ -53,6 +53,7 @@ size is the total number of nodes in the map tree
 typedef struct {
     RTreeNode *root;
     long long size;
+    RTreeNode *pool;
 } RTree;
 
 void merge(long long *indicies, long long left, long long mid, long long right, Graph *g, int sort_by_lon);
