@@ -4,6 +4,7 @@
 #include "graph.h"
 #include "adjacency.h"
 #include "rtree.h"
+#include <stddef.h>
 
 typedef struct {
     const char *name;
@@ -19,5 +20,6 @@ void utils_parse_places(Coordinate *src_coord, Coordinate *dst_coord, char *argv
 void utils_get_coord(Coordinate *src_coord, Coordinate *dst_coord, char *argv[]);
 void utils_get_index(long long *src_index, long long *dst_index, char *argv[], RTree *tree, Graph *g, AdjList *adj);
 void utils_print_results(ResultPath *rp);
+void utils_cache_path(char *out, size_t out_size, const char *bin_path);
 
 #endif

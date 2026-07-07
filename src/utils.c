@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 // Define places
 Place PLACES[] = {
@@ -84,3 +85,18 @@ void utils_print_results(ResultPath *rp) {
             );
     }
 }
+
+// write *out to the *bin_path
+void utils_cache_path(char *out, size_t out_size, const char *bin_path)
+{
+    // 
+    const char *slash     = strrchr(bin_path, '/');
+    const char *backslash = strrchr(bin_path, '\\');
+    const char *filename  = bin_path;
+
+    if (slash && (!backslash || slash > backslash)) filename = slash + 1;
+    else if (backslash) filename = backslash + 1;
+
+    snprintf(out, out_size, "data/contractions/%s", filename);
+}
+

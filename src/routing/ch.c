@@ -543,3 +543,118 @@ ResultPath *ch_query(Graph *g, CHGraph *ch_g, AdjList *adj, AdjList *adj_r, Hash
 
     return result;
 }
+
+// saves the contraction ierachy to path
+int ch_save(const char *path, Graph *g, AdjList *adj, AdjList *adj_r, CHGraph *ch_g)
+{
+    // open the file path
+    FILE *f = fopen(path, "wb");
+
+    // check if the file path successfully opened
+    if (!f)
+    {
+        printf("failed to open %s for writing (does the folder exist?)\n", path);
+        return 0;
+    }
+
+    // write the nodecount first
+    fwrite(&g->node_count, sizeof(long long), 1, f);
+
+    // write all ranks (node_count many)
+    fwrite(ch_g->rank, sizeof(long long), g->node_count, f);
+
+    // for each node write its adjacent edges
+    for (long long i = 0; i < g->node_count; i++)
+    {
+        // write number of adjacent edges
+        fwrite(&adj[i].count, sizeof(long long), 1, f);
+
+        // write the adjacent edges
+        fwrite(adj[i].edges, sizeof(AdjEdge), adj[i].count, f);
+    }
+
+    // for each node write the adjacent reverse edges
+    for (long long i = 0; i < g->node_count; i++)
+    {
+        // write number of adjacent reverse edges
+        fwrite(&adj_r[i].count, sizeof(long long), 1, f);
+
+        // write the adjacent edges
+        fwrite(adj_r[i].edges, sizeof(AdjEdge), adj_r[i].count, f);
+    }
+
+    // return 1 if successfull
+    fclose(f);
+    return 1;
+}
+
+// loads the ocntraction hierachy from a path
+CHGraph *ch_load(const char *path, Graph *g, AdjList **out_adj, AdjList **out_adj_r)
+{
+    // open file f at path
+    FILE *f = fopen(path, "rb");
+    if (!f) return NULL;
+
+    // scan the first long long for the number of nodes
+    long long cached_node_count = 0;
+    fread(&cached_node_count, sizeof(long long), 1, f);
+
+    // if the cached node count is any different from g->node_count then rebuild to maintain integrity
+    if (cached_node_count != g->node_count) {
+        printf("contraction cache %s is invalid, rebuilding\n", path);
+        fclose(f);
+        return NULL;
+    }
+
+    // create a new empty CHFraph
+    CHGraph *ch_g = malloc(sizeof(CHGraph));
+    if (!ch_g) { fclose(f); return NULL; }
+
+    // set the deafult values
+    ch_g->g = g;
+
+    // allocate memory for the rank array
+    ch_g->rank = malloc(g->node_count * sizeof(long long));
+    if (!ch_g->rank) { free(ch_g); fclose(f); return NULL; }
+
+    // make the ch_g rank equal to the binnary that is stored in the file
+    fread(ch_g->rank, sizeof(long long), g->node_count, f);
+
+    // create empty adjacency lists for both forard and reverse edges
+    AdjList *adj   = adjlist_create_empty(g->node_count);
+    AdjList *adj_r = adjlist_create_empty(g->node_count);
+
+    // run for number of adj edges
+    for (long long i = 0; i < g->node_count; i++)
+    {
+        // get the count of the adj edges
+        fread(&adj[i].count, sizeof(long long), 1, f);
+
+        // allocate the capacity as well as memory for edges
+        adj[i].capacity = adj[i].count;
+        adj[i].edges = malloc(adj[i].count * sizeof(AdjEdge));
+
+        // read the binary for the edges for current node i
+        fread(adj[i].edges, sizeof(AdjEdge), adj[i].count, f);
+    }
+
+    // do the same but for adj_r
+    for (long long i = 0; i < g->node_count; i++)
+    {
+        fread(&adj_r[i].count, sizeof(long long), 1, f);
+
+        adj_r[i].capacity = adj_r[i].count;
+        adj_r[i].edges = malloc(adj_r[i].count * sizeof(AdjEdge));
+
+        fread(adj_r[i].edges, sizeof(AdjEdge), adj_r[i].count, f);
+    }
+
+    // close the file
+    fclose(f);
+
+    // return the values found
+    *out_adj   = adj;
+    *out_adj_r = adj_r;
+    
+    return ch_g;
+}

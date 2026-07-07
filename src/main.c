@@ -26,11 +26,25 @@ int main(int argc, char* argv[]) {
     const char  *bin_path   = argv[1];
     Graph       *g          = graph_load(bin_path);
     HashMap     *map        = hashmap_create_index_from_graph(g);
-    AdjList     *adj        = adjlist_create(g, map, 0);
-    AdjList     *adj_r      = adjlist_create(g, map, 1);
     RTree       *tree       = rtree_build(g);
     printf("Number of nodes: %lld, edges %lld\n", g->node_count, g->edge_count);
-    CHGraph     *ch_g       = ch_build(g, adj, adj_r);
+
+    char cache_path[512];
+    utils_cache_path(cache_path, sizeof(cache_path), bin_path);
+
+    AdjList *adj    = NULL;
+    AdjList *adj_r  = NULL;
+    CHGraph *ch_g   = ch_load(cache_path, g, &adj, &adj_r);
+
+    if (ch_g) {
+        printf("Loaded cached contraction hierarchy from %s\n", cache_path);
+    } else {
+        adj   = adjlist_create(g, map, 0);
+        adj_r = adjlist_create(g, map, 1);
+        ch_g  = ch_build(g, adj, adj_r);
+        ch_save(cache_path, g, adj, adj_r, ch_g);
+    }
+    
     t = clock() - t;
     printf("Variables Loaded in %fs\n\n", ((double)t / CLOCKS_PER_SEC));
 
