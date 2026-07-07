@@ -3,40 +3,37 @@
 #include <stdio.h>
 
 HashMap* hashmap_create(long long capacity) {
-    HashMap* map = malloc(sizeof(HashMap));
+    HashMap* map = NULL;
 
-    if (map == NULL) {
-        printf("Failed to allocate memory for HashMap");
-        hashmap_free(map);
-        return NULL;
-    }
+    // allocate memory for the hashmap
+    map = malloc(sizeof(HashMap));
+    if (!map) goto cleanup;
 
-    map->buckets = calloc(capacity, sizeof(HashMapEntry*));
-
-    if (map->buckets == NULL) {
-        printf("Failed to allocate memory for map->buckets");
-        hashmap_free(map);
-        return NULL;
-    }
-
+    // set capacity and size defaults
     map->capacity = capacity;
     map->size = 0;
 
+    // allocate memory for each bucket
+    map->buckets = calloc(capacity, sizeof(HashMapEntry*));
+    if (!map->buckets) goto cleanup;
+
     return map;
+
+    cleanup:
+        hashmap_free(map);
+        return NULL;
 }
 
 void hashmap_insert(HashMap *map, long long key, long long value) {
+    long long       index;
+    HashMapEntry    *entry = NULL;
+
     // hash the key into an index
-    long long index = key % map->capacity;
+    index = key % map->capacity;
 
     // create a new entry
-    HashMapEntry *entry = malloc(sizeof(HashMapEntry));
-    
-    if (entry == NULL) {
-        printf("Failed to allocate memory for HashMapEntry");
-        hashmap_free(map);
-        return;
-    }
+    entry = malloc(sizeof(HashMapEntry));
+    if (!entry) hashmap_free(map);
 
     entry->key = key;
     entry->value = value;
@@ -50,11 +47,14 @@ void hashmap_insert(HashMap *map, long long key, long long value) {
 }
 
 long long hashmap_get(HashMap *map, long long key) {
+    long long       index;
+    HashMapEntry    *entry;
+
     // get the index from the key
-    long long index = key % map->capacity;
+    index = key % map->capacity;
 
     // find the bucket that is associated with the index
-    HashMapEntry *entry = map->buckets[index];
+    entry = map->buckets[index];
 
     // check over each entry until the key matches
     while (entry != NULL) {
@@ -90,18 +90,20 @@ void hashmap_free(HashMap *map) {
 }
 
 HashMap* hashmap_create_index_from_graph(Graph *g) {
+    HashMap *map = NULL;
+
     // multiplying by 2 keeps hashmap half full to reduce collisions, can change this later
-    HashMap *map = hashmap_create(g->node_count * 2);
+    map = hashmap_create(g->node_count * 2);
+    if (!map) goto cleanup;
 
-    if (map == NULL) {
-        printf("failed to generate hashmap");
-        hashmap_free(map);
-        return NULL;
-    }
-
+    // insert all nodes into the hashmap
     for (long long i = 0; i < g->node_count; i++){
         hashmap_insert(map, g->nodes[i].id, i);
     }
 
     return map;
+
+    cleanup:
+        hashmap_free(map);
+        return NULL;
 }

@@ -48,9 +48,11 @@ void utils_parse_places(Coordinate *src_coord, Coordinate *dst_coord, char *argv
 }
 
 void utils_get_coord(Coordinate *src_coord, Coordinate *dst_coord, char *argv[]) {
-    if (strcmp(argv[2], "-c") == 0) {
+    if (strcmp(argv[2], "-c") == 0)
+    {
         utils_parse_arg(src_coord, dst_coord, argv);
-    } else {
+    } else
+    {
         utils_parse_places(src_coord, dst_coord, argv);
     }
 }

@@ -121,8 +121,10 @@ void compute_mbr(RTreeNode *node, Graph *g) {
     node->mbr.min_lon = DBL_MAX;
     node->mbr.max_lon = -DBL_MAX;
 
-    if (node->is_leaf) {
-        for (int i = 0; i < node->children_count; i++) {
+    if (node->is_leaf)
+    {
+        for (int i = 0; i < node->children_count; i++)
+        {
             double lat = g->nodes[node->entries[i]].lat;
             double lon = g->nodes[node->entries[i]].lon;
 
@@ -131,8 +133,10 @@ void compute_mbr(RTreeNode *node, Graph *g) {
             if (lon < node->mbr.min_lon) node->mbr.min_lon = lon;
             if (lon > node->mbr.max_lon) node->mbr.max_lon = lon;            
         }
-    } else {
-        for (int i = 0; i < node->children_count; i++) {
+    } else
+    {
+        for (int i = 0; i < node->children_count; i++)
+        {
             MinimumBoundingRectangle *c = &node->children[i]->mbr;
 
             if (c->min_lat < node->mbr.min_lat) node->mbr.min_lat = c->min_lat;
@@ -143,7 +147,8 @@ void compute_mbr(RTreeNode *node, Graph *g) {
     }
 }
 
-RTree* rtree_build(Graph *g) {
+RTree* rtree_build(Graph *g)
+{
     /*
         --- step 1 ---
         sory all nodes by longitude

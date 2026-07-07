@@ -211,6 +211,7 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
     int         *hops       = NULL;
     MinHeap     *heap       = NULL;
     long long   *touched    = NULL;
+    MinHeap     *order_heap = NULL;
 
     // initialise variables
     clock_t t = clock();
@@ -241,7 +242,7 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
         hops[i]    = INT_MAX;
     }
 
-    MinHeap *order_heap = createHeap(g->node_count);
+    order_heap = createHeap(g->node_count);
 
     // initial scoring — push onto order_heap
     for (long long i = 0; i < g->node_count; i++) {
@@ -272,7 +273,7 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
         free(visited);
         free(hops);
         free(dist);
-        free(order_heap);
+        freeHeap(order_heap);
 
     t = clock() - t;
 
