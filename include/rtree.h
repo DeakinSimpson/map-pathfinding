@@ -56,8 +56,8 @@ typedef struct {
     RTreeNode *pool;
 } RTree;
 
-void merge(long long *indicies, long long left, long long mid, long long right, Graph *g, int sort_by_lon);
-void merge_sort(long long *indicies, long long left, long long right, Graph *g, int sort_by_lon);
+// void merge(long long *indicies, long long left, long long mid, long long right, Graph *g, int sort_by_lon);
+// void merge_sort(long long *indicies, long long left, long long right, Graph *g, int sort_by_lon);
 
 RTree* rtree_build(Graph *g);
 double mbr_min_dist_sq(Coordinate coord, MinimumBoundingRectangle *mbr);

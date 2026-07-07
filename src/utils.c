@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <time.h>
 
 // Define places
 Place PLACES[] = {
@@ -100,3 +101,65 @@ void utils_cache_path(char *out, size_t out_size, const char *bin_path)
     snprintf(out, out_size, "data/contractions/%s", filename);
 }
 
+LoadedVariables utils_load_variables(const char *bin_path)
+{
+    LoadedVariables vars = {0};
+    clock_t t_stage = clock();
+
+    vars.g = graph_load(bin_path);
+    printf("graph_load:           %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
+
+    t_stage = clock();
+    vars.map = hashmap_create_index_from_graph(vars.g);
+    printf("hashmap_create:       %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
+
+    char cache_path[512];
+    utils_cache_path(cache_path, sizeof(cache_path), bin_path);
+
+    vars.adj = NULL;
+    vars.adj_r = NULL;
+    vars.adj_pool = NULL;
+    vars.adj_r_pool = NULL;
+    vars.loaded_from_cache = 0;
+
+    t_stage = clock();
+    vars.ch_g = ch_load(cache_path, vars.g, &vars.adj, &vars.adj_r, &vars.adj_pool, &vars.adj_r_pool);
+    printf("ch_load:              %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
+
+    if (vars.ch_g) {
+        vars.loaded_from_cache = 1;
+    } else {
+        t_stage = clock();
+        vars.adj   = adjlist_create(vars.g, vars.map, 0);
+        vars.adj_r = adjlist_create(vars.g, vars.map, 1);
+        printf("adjlist_create x2:    %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
+
+        vars.ch_g = ch_build(vars.g, vars.adj, vars.adj_r);   // prints its own internal timing already
+
+        t_stage = clock();
+        ch_save(cache_path, vars.g, vars.adj, vars.adj_r, vars.ch_g);
+        printf("ch_save:              %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
+    }
+
+    t_stage = clock();
+    vars.tree = rtree_build(vars.g);
+    printf("rtree_build:          %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
+
+    printf("Number of nodes: %lld, edges %lld\n", vars.g->node_count, vars.g->edge_count);
+
+    return vars;
+}
+
+void utils_free_variables(LoadedVariables *vars)
+{
+    if (vars->loaded_from_cache) {
+        adjlist_free_pooled(vars->adj, vars->adj_pool);
+        adjlist_free_pooled(vars->adj_r, vars->adj_r_pool);
+    } else {
+        adjlist_free(vars->adj, vars->g->node_count);
+        adjlist_free(vars->adj_r, vars->g->node_count);
+    }
+    hashmap_free(vars->map);
+    graph_free(vars->g);
+    rtree_free(vars->tree);
+}

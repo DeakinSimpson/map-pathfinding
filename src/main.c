@@ -21,88 +21,39 @@ int main(int argc, char* argv[]) {
 
     printf("Pathfinder Starting...\n");
     // initialise variables
-        clock_t t_total = clock();
-    clock_t t_stage;
+    clock_t t_total = clock();
 
-    const char *bin_path = argv[1];
-
-    t_stage = clock();
-    Graph *g = graph_load(bin_path);
-    printf("graph_load:           %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
-
-    t_stage = clock();
-    HashMap *map = hashmap_create_index_from_graph(g);
-    printf("hashmap_create:       %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
-
-    char cache_path[512];
-    utils_cache_path(cache_path, sizeof(cache_path), bin_path);
-
-    AdjList *adj = NULL, *adj_r = NULL;
-    AdjEdge *adj_pool = NULL, *adj_r_pool = NULL;
-    int loaded_from_cache = 0;
-
-    t_stage = clock();
-    CHGraph *ch_g = ch_load(cache_path, g, &adj, &adj_r, &adj_pool, &adj_r_pool);
-    printf("ch_load:              %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
-
-    if (ch_g) {
-        loaded_from_cache = 1;
-    } else {
-        t_stage = clock();
-        adj   = adjlist_create(g, map, 0);
-        adj_r = adjlist_create(g, map, 1);
-        printf("adjlist_create x2:    %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
-
-        ch_g = ch_build(g, adj, adj_r);   // prints its own internal timing already
-
-        t_stage = clock();
-        ch_save(cache_path, g, adj, adj_r, ch_g);
-        printf("ch_save:              %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
-    }
-
-    t_stage = clock();
-    RTree *tree = rtree_build(g);
-    printf("rtree_build:          %fs\n", (double)(clock() - t_stage) / CLOCKS_PER_SEC);
+    // load in all variables
+    LoadedVariables vars = utils_load_variables(argv[1]);
 
     t_total = clock() - t_total;
     printf("Variables Loaded in   %fs\n\n", ((double)t_total / CLOCKS_PER_SEC));
 
-    printf("Number of nodes: %lld, edges %lld\n", g->node_count, g->edge_count);
-
     // get indexes
     long long src_index;
     long long dst_index;
-    utils_get_index(&src_index, &dst_index, argv, tree, g, adj);
+    utils_get_index(&src_index, &dst_index, argv, vars.tree, vars.g, vars.adj);
 
     // run algorithms
-    ResultPath *dijkstra_rp_full = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id, 0);
+    ResultPath *dijkstra_rp_full = dijkstra(vars.g, vars.adj, vars.map, vars.g->nodes[src_index].id, vars.g->nodes[dst_index].id, 0);
     utils_print_results(dijkstra_rp_full);
 
-    ResultPath *dijkstra_rp_early = dijkstra(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id, 1);
+    ResultPath *dijkstra_rp_early = dijkstra(vars.g, vars.adj, vars.map, vars.g->nodes[src_index].id, vars.g->nodes[dst_index].id, 1);
     utils_print_results(dijkstra_rp_early);
 
-    ResultPath *astar_rp = astar(g, adj, map, g->nodes[src_index].id, g->nodes[dst_index].id);
+    ResultPath *astar_rp = astar(vars.g, vars.adj, vars.map, vars.g->nodes[src_index].id, vars.g->nodes[dst_index].id);
     utils_print_results(astar_rp);
 
-    ResultPath *astar_reverse_rp = astar_bidir(g, adj, adj_r, map, g->nodes[src_index].id, g->nodes[dst_index].id);
+    ResultPath *astar_reverse_rp = astar_bidir(vars.g, vars.adj, vars.adj_r, vars.map, vars.g->nodes[src_index].id, vars.g->nodes[dst_index].id);
     utils_print_results(astar_reverse_rp);
 
-    ResultPath *ch_rp = ch_query(g, ch_g, adj, adj_r, map, g->nodes[src_index].id, g->nodes[dst_index].id);
+    ResultPath *ch_rp = ch_query(vars.g, vars.ch_g, vars.adj, vars.adj_r, vars.map, vars.g->nodes[src_index].id, vars.g->nodes[dst_index].id);
     utils_print_results(ch_rp);
 
     // freeing variables
-    if (loaded_from_cache) {
-        adjlist_free_pooled(adj, adj_pool);
-        adjlist_free_pooled(adj_r, adj_r_pool);
-    } else {
-        adjlist_free(adj, g->node_count);
-        adjlist_free(adj_r, g->node_count);
-    }
-    hashmap_free(map);
-    graph_free(g);
+    utils_free_variables(&vars);
     result_path_free(dijkstra_rp_full);
     result_path_free(dijkstra_rp_early);
-    rtree_free(tree);
 
     printf("Terminating Program...\n");
     return 0;
