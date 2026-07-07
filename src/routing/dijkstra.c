@@ -8,73 +8,44 @@
 #include "heap.h"
 
 ResultPath *dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, long long dst_id, int early_break) {
+    long long   src_index   = -1;
+    long long   dst_index   = -1;
+    double      *dist       = NULL;
+    long long   *prev       = NULL;
+    long long   *visited    = NULL;
+    double      *km_dist    = NULL;
+    MinHeap     *heap       = NULL;
+    long long   *path       = NULL;
+    ResultPath  *result     = NULL;
+    
     clock_t t = clock();
-    // get source index from node id
-    long long src_index = hashmap_get(map, src_id);
 
-    if (src_index == -1) {
-        printf("failed to get index for src\n");
-        return NULL;
-    }
+    // get source index from node id
+    src_index = hashmap_get(map, src_id);
+    if (src_index == -1) goto cleanup;
 
     // get destination index from node id
-    long long dst_index = hashmap_get(map, dst_id);
-
-    if (dst_index == -1) {
-        printf("failed to get index for dst");
-        return NULL;
-    }
+    dst_index = hashmap_get(map, dst_id);
+    if (dst_index == -1) goto cleanup;
 
     // allocate dist array (size node_count), set all to DBL_MAX
-    double *dist = malloc(g->node_count * sizeof(double));
-
-    if (dist == NULL) {
-        printf("failed to allocate memory for dist");
-
-        free(dist);
-
-        return NULL;
-    }
+    dist = malloc(g->node_count * sizeof(double));
+    if (!dist) goto cleanup;
 
     // allocate prev array (size node_count), set all to -1
-    long long *prev = malloc(g->node_count * sizeof(long long));
-
-    if (prev == NULL) {
-        printf("failed to allocate memory for prev");
-
-        free(prev);
-        free(dist);
-
-        return NULL;
-    }
+    prev = malloc(g->node_count * sizeof(long long));
+    if (!prev) goto cleanup;
 
     // allocate visited array (size node_count), set all to 0
-    long long* visited = malloc(g->node_count * sizeof(long long));
+    visited = malloc(g->node_count * sizeof(long long));
+    if (!visited) goto cleanup;
 
-    if (visited == NULL) {
-        printf("failed to allocate memory for visited");
-
-        free(prev);
-        free(dist);
-        free(visited);
-
-        return NULL;
-    }
-
-    double *km_dist = malloc(g->node_count * sizeof(double));
-
-    if (km_dist == NULL) {
-        printf("failed to allocate memory for km_dist");
-
-        free(prev);
-        free(dist);
-        free(visited);
-
-        return NULL;
-    }
+    km_dist = malloc(g->node_count * sizeof(double));
+    if (!km_dist) goto cleanup;
 
     // setting arrays to their specified values
-    for (long long i = 0; i < g->node_count; i++) {
+    for (long long i = 0; i < g->node_count; i++)
+    {
         dist[i] = DBL_MAX;  // sets the distance to DBL_MAX (infinite in theory)
         km_dist[i] = DBL_MAX;
         prev[i] = -1;       // sets all nodes prev node to -1, not traversed
@@ -86,18 +57,8 @@ ResultPath *dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
     km_dist[src_index] = 0;
 
     // create heap and push src with distance 0
-    MinHeap *heap = createHeap(1024);
-
-    if (heap == NULL) {
-        printf("failed to create heap");
-        
-        freeHeap(heap);
-        free(prev);
-        free(dist);
-        free(visited);        
-
-        return NULL;
-    }
+    heap = createHeap(1024);
+    if (!heap) goto cleanup;
 
     push(heap, 0, src_index);
 
@@ -107,29 +68,17 @@ ResultPath *dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
         HeapNode cur_node = pop(heap);
         long long u = cur_node.nodeIndex;
 
-        // if visited[u] skip
-        if (visited[u] == 1) {
-            continue;
-        }
+        if (visited[u] == 1) continue; // if visited[u] skip
+        if (early_break == 1 && u == dst_index) break; // if u == dst_index break early 
 
-        // mark visited[u] = 1
-        visited[u] = 1;
-
-        // if u == dst_index break early 
-        if (early_break == 1 && u == dst_index) {
-            break;
-        }
+        visited[u] = 1; // mark visited[u] = 1
 
         AdjList *neighbors = &adj[u];
         // loop through all neighbours of u in adj[u]:
         for (int i = 0; i < neighbors->count; i++) {
             // get neighbour index (v)
             long long v = neighbors->edges[i].dst_index;;
-
-            // if visited[v] skip
-            if (v == -1 || visited[v] == 1) {
-                continue;
-            }
+            if (v == -1 || visited[v] == 1) continue; // if visited[v] skip
 
             // calculate alternative distance = dist[u] + edge weight
             double speed_ms = neighbors->edges[i].speed_limit / 3.6;
@@ -146,19 +95,12 @@ ResultPath *dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
         }
     }
 
-    if (dist[dst_index] == DBL_MAX) {
-        printf("no path found between src and dst\n");
-
-        freeHeap(heap);
-        free(prev);
-        free(dist);
-        free(visited);
-        
-        return NULL;
-    }
+    if (dist[dst_index] == DBL_MAX) goto cleanup;
 
     // reconstruct path by walking prev[] from dst back to src
-    long long *path = malloc(g->node_count * sizeof(long long));
+    path = malloc(g->node_count * sizeof(long long));
+    if (!path) goto cleanup;
+
     long long cur_index = dst_index;
     long long i = 0;
 
@@ -174,27 +116,33 @@ ResultPath *dijkstra(Graph *g, AdjList *adj, HashMap *map, long long src_id, lon
         path[l] = path[r];
         path[r] = tmp;
     }
+
     path = realloc(path, (i + 1) * sizeof(long long));
+    if (!path) goto cleanup;
 
     // return path
     t = clock() - t;
 
-    ResultPath *result = malloc(sizeof(ResultPath));
+    result = malloc(sizeof(ResultPath));
+
+
     if (early_break) {
         result->name = "Dijkstra Early Break";
     } else {
         result->name = "Dijkstra Full";
     }
+
     result->path_inx = path;
     result->time_in_seconds = dist[dst_index];
     result->distance_in_metres = km_dist[dst_index];
     result->load_time_in_seconds = ((double)t / CLOCKS_PER_SEC);
 
     // free dist, visited, heap
-    freeHeap(heap);
-    free(prev);
-    free(dist);
-    free(visited);
+    cleanup:
+        freeHeap(heap);
+        free(prev);
+        free(dist);
+        free(visited);
 
     return result;
 }
