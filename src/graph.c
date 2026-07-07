@@ -78,13 +78,13 @@ Graph* graph_load(const char* path) {
 
 #define PI 3.14159265358979323846
 
-double to_rad(double deg) {
+static double to_rad(double deg) {
     return (deg * PI) / 180;
 }
 
 #define EARTH_RADIUS_KM 6371.0
 
-double haversine(Coordinate coord1, Coordinate coord2) {
+static double haversine(Coordinate coord1, Coordinate coord2) {
     double dlat = to_rad(coord2.lat - coord1.lat);
     double dlon = to_rad(coord2.lon - coord1.lon);
     double a = sin(dlat/2) * sin(dlat/2) +
