@@ -8,27 +8,26 @@
 Allocated space in memory for graph
 */
 Graph* graph_create(long long node_capacity, long long edge_capacity) {
-    Graph* g = malloc(sizeof(Graph));
-    
-    // allocatges space in memory for nodes and edges, then sets count to 0
-    g->nodes = malloc(node_capacity * sizeof(Node));
-
-    if (g->nodes == NULL) {
-        printf("failed to allocate memory");
-        graph_free(g);
-    }
-
-    g->edges = malloc(edge_capacity * sizeof(Edge));
-
-    if (g->edges == NULL) {
-        printf("failed to allocate memory");
-        graph_free(g);
-    }
+    Graph* g = NULL;
+  
+    g = malloc(sizeof(Graph));
+    if (!g) goto cleanup;
 
     g->node_count = 0;
     g->edge_count = 0;
 
+    // allocatges space in memory for nodes and edges, then sets count to 0
+    g->nodes = malloc(node_capacity * sizeof(Node));
+    if (!g->nodes) goto cleanup;
+
+    g->edges = malloc(edge_capacity * sizeof(Edge));
+    if (!g->edges) goto cleanup;
+
     return g;
+
+    cleanup:
+        graph_free(g);
+        return NULL;
 }
 
 /*
