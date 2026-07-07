@@ -75,9 +75,9 @@ void utils_print_results(ResultPath *rp) {
     } else {
         printf( 
                 "%s\n"
-                "\ttravel time: %f minutes\n"
-                "\tdistance travelled: %f kms\n"
-                "\ttime to load: %f seconds\n", 
+                "\ttravel time:         %f minutes\n"
+                "\tdistance travelled:  %f kms\n"
+                "\ttime to load:        %f seconds\n", 
                 rp->name, 
                 (rp->time_in_seconds / 60), 
                 (rp->distance_in_metres / 1000), 
