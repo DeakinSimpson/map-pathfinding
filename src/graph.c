@@ -76,23 +76,6 @@ Graph* graph_load(const char* path) {
     return g;
 }
 
-#define PI 3.14159265358979323846
-
-static double to_rad(double deg) {
-    return (deg * PI) / 180;
-}
-
-#define EARTH_RADIUS_KM 6371.0
-
-static double haversine(Coordinate coord1, Coordinate coord2) {
-    double dlat = to_rad(coord2.lat - coord1.lat);
-    double dlon = to_rad(coord2.lon - coord1.lon);
-    double a = sin(dlat/2) * sin(dlat/2) +
-               cos(to_rad(coord1.lat)) * cos(to_rad(coord2.lat)) *
-               sin(dlon/2) * sin(dlon/2);
-    return EARTH_RADIUS_KM * 2 * atan2(sqrt(a), sqrt(1-a));
-}
-
 void result_path_free(ResultPath *rp) {
     free(rp->path_inx);
     free(rp);

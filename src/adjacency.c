@@ -7,7 +7,7 @@
 AdjList* adjlist_create(Graph *g, HashMap *map, int reverse) {
     // allocate an adjacency list per node
     AdjList *adj = calloc(g->node_count, sizeof(AdjList));
-    if (!adj) adjlist_free(adj); return NULL;
+    if (!adj) {adjlist_free(adj, g->node_count); return NULL;}
 
     for (long long i = 0; i < g->edge_count; i++) {
         Edge *e = &g->edges[i];
