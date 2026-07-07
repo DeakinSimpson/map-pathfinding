@@ -24,23 +24,49 @@ static CHGraph *ch_init(Graph *g)
     return ch_g;
 }
 
+// resets the dist array to DBL_MAX
+static void reset_search_state(double *dist, long long *touched, int *touched_count)
+{
+    for (int i = 0; i < *touched_count; i++) 
+    {
+        dist[touched[i]] = DBL_MAX;
+    }
+}
+
+// resets visited and hops
+static void clear_visited_hops(long long *visited, int *hops, long long *touched, int *touched_count)
+{
+    for (int i = 0; i < *touched_count; i++) {
+        visited[touched[i]] = 0;
+        hops[touched[i]]    = INT_MAX;
+    }
+}
+
+// checks the speed limit, if it is 0 (a contracted node) just return weight
+static double edge_travel_time(AdjEdge *edge)
+{
+    if (edge->speed_limit == 0) {
+        return edge->weight;
+    }
+
+    double speed_ms = edge->speed_limit / 3.6;
+    return edge->weight / speed_ms;
+}
 /*
 runs a dijkstra from v outwards to max_dist
 */
 static double* local_dijkstra(CHGraph *ch_g, AdjList *adj, long long src, long long skip_node, double max_dist, double *dist, long long *visited, int *hops, MinHeap *heap, long long *touched, int *touched_count)
 {
-    // reset dist from previous call
-    for (int i = 0; i < *touched_count; i++) 
-    {
-        dist[touched[i]] = DBL_MAX;
-    }
+    reset_search_state(dist, touched, touched_count);
 
+    // set all values to 0
     *touched_count  = 0;
     heap->size      = 0;
     dist[src]       = 0;
     hops[src]       = 0;
     touched[(*touched_count)++] = src;
 
+    // push src to heap
     push(heap, 0, src);
 
     while (heap->size > 0)
@@ -48,32 +74,25 @@ static double* local_dijkstra(CHGraph *ch_g, AdjList *adj, long long src, long l
         HeapNode  cur_node = pop(heap);
         long long u        = cur_node.nodeIndex;
 
+        // contrinue states
         if (visited[u] == 1) continue;
         if (u == skip_node)  continue;
-        if (dist[u] > max_dist) break;
         if (hops[u] >= HOP_LIMIT) continue;
+        if (dist[u] > max_dist) break;
 
-        visited[u] = 1;
+        visited[u] = 1; // mark current node as vistited
 
         for (int i = 0; i < adj[u].count; i++) {
             long long v = adj[u].edges[i].dst_index;
 
             if (v == -1 || visited[v] == 1 || ch_g->rank[v] != -1) continue;
 
-            double time;
-            if (adj[u].edges[i].speed_limit == 0) {
-                time = adj[u].edges[i].weight;
-            } else {
-                double speed_ms = adj[u].edges[i].speed_limit / 3.6;
-                time = adj[u].edges[i].weight / speed_ms;
-            }
+            double time = edge_travel_time(&adj[u].edges[i]);
 
             double alt = dist[u] + time;
 
             if (alt < dist[v]) {
-                if (dist[v] == DBL_MAX) {
-                    touched[(*touched_count)++] = v;
-                }
+                if (dist[v] == DBL_MAX) touched[(*touched_count)++] = v;
                 dist[v] = alt;
                 hops[v] = hops[u] + 1;
                 push(heap, alt, v);
@@ -82,14 +101,26 @@ static double* local_dijkstra(CHGraph *ch_g, AdjList *adj, long long src, long l
     }
 
     // reset visited and hops only — dist stays valid for the caller to read
-    for (int i = 0; i < *touched_count; i++) {
-        visited[touched[i]] = 0;
-        hops[touched[i]]    = INT_MAX;
-    }
+    clear_visited_hops(visited, hops, touched, touched_count);
 
     return dist;
 }
 
+static double find_farthest_outgoing_travel_time(AdjList *adj, CHGraph *ch_g, long long v, long long u, double u_time) {
+    double max_dist = 0.0;
+    for (int j = 0; j < adj[v].count; j++)
+    {
+        AdjEdge w_edge = adj[v].edges[j];
+        long long w = w_edge.dst_index;
+        double w_time = edge_travel_time(&w_edge);
+
+        if (w == -1 || w == v || w == u || ch_g->rank[w] != -1) continue;
+        
+        if (u_time + w_time > max_dist) max_dist = u_time + w_time;
+    }
+
+    return max_dist;
+}
 /*
 Gets the number of shortcuts between nodes that can be made if v was removed
 */
@@ -98,49 +129,37 @@ static int edge_difference(CHGraph *ch_g, AdjList *adj, AdjList *adj_r, long lon
     int shortcuts = 0;
 
     for (int i = 0; i < adj_r[v].count; i++)
-    {
-        long long u = adj_r[v].edges[i].dst_index;
+    {   
+        // initialise u variables
+        AdjEdge     u_edge  = adj_r[v].edges[i];
+        long long   u       = u_edge.dst_index;
+        double      u_time  = edge_travel_time(&u_edge);
+
         if (u == -1 || u == v || ch_g->rank[u] != -1) continue;
 
-        double u_time;
-        if (adj_r[v].edges[i].speed_limit == 0) {
-            u_time = adj_r[v].edges[i].weight;
-        } else {
-            u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
-        }
+        // gets the maxium distance of node u to w, this is so local_dijkstra doesnt look any further
+        double max_dist = find_farthest_outgoing_travel_time(adj, ch_g, v, u, u_time);
 
-        // per-u max_dist: only as far as the farthest outgoing neighbor needs
-        double max_dist = 0.0;
-        for (int j = 0; j < adj[v].count; j++) {
-            long long w = adj[v].edges[j].dst_index;
-            if (w == -1 || w == v || w == u || ch_g->rank[w] != -1) continue;
-            double w_time;
-            if (adj[v].edges[j].speed_limit == 0) {
-                w_time = adj[v].edges[j].weight;
-            } else {
-                w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
-            }
-            if (u_time + w_time > max_dist) max_dist = u_time + w_time;
-        }
-
+        // run dijksta with the bounding box of max_dist
         double *l_dist = local_dijkstra(ch_g, adj, u, v, max_dist, dist, visited, hops, heap, touched, touched_count);
 
-        for (int j = 0; j < adj[v].count; j++) {
-            long long w = adj[v].edges[j].dst_index;
-            if (w == -1 || w == v || w == u || ch_g->rank[w] != -1) continue;
+        // if there is a faster path around the node v add the shortcut u-w to the shortcut count
+        for (int j = 0; j < adj[v].count; j++)
+        {
+            AdjEdge w_edge  = adj[v].edges[j];
+            long long w     = w_edge.dst_index;
+            double w_time   = edge_travel_time(&w_edge);
 
-            double w_time;
-            if (adj[v].edges[j].speed_limit == 0) {
-                w_time = adj[v].edges[j].weight;
-            } else {
-                w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
-            }
+            if (w == -1 || w == v || w == u || ch_g->rank[w] != -1) continue;
 
             if (l_dist[w] > u_time + w_time) shortcuts++;
         }
     }
 
     int edges_removed = adj_r[v].count + adj[v].count;
+
+    // returns the difference in shortcuts and edges removed, allowing the node to be ranked
+    // a higher number means that removing this node will create heaps of shortcuts compared to how many edges it has meaning that it is a hub of nodes
     return shortcuts - edges_removed;
 }
 
@@ -151,46 +170,32 @@ static void ch_contract_node(AdjList *adj, AdjList *adj_r, CHGraph *ch_g, long l
 
     for (int i = 0; i < incoming_count; i++)
     {
-        long long u = adj_r[v].edges[i].dst_index;
+        AdjEdge u_edge = adj_r[v].edges[i];
+        long long u = u_edge.dst_index;
+        double u_time = edge_travel_time(&u_edge);
+
         if (u == -1 || u == v || ch_g->rank[u] != -1) continue;
 
-        double u_time;
-        if (adj_r[v].edges[i].speed_limit == 0) {
-            u_time = adj_r[v].edges[i].weight;
-        } else {
-            u_time = adj_r[v].edges[i].weight / (adj_r[v].edges[i].speed_limit / 3.6);
-        }
-
         // per-u max_dist: only search as far as needed for the farthest w
-        double max_dist = 0.0;
-        for (int j = 0; j < outgoing_count; j++) {
-            long long w = adj[v].edges[j].dst_index;
-            if (w == -1 || w == v || w == u || ch_g->rank[w] != -1) continue;
-            double w_time;
-            if (adj[v].edges[j].speed_limit == 0) {
-                w_time = adj[v].edges[j].weight;
-            } else {
-                w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
-            }
-            if (u_time + w_time > max_dist) max_dist = u_time + w_time;
-        }
+        double max_dist = find_farthest_outgoing_travel_time(adj, ch_g, v, u, u_time);
 
+        // run dijksta with the bounding box of max_dist
         double *l_dist = local_dijkstra(ch_g, adj, u, v, max_dist, dist, visited, hops, heap, touched, touched_count);
 
         for (int j = 0; j < outgoing_count; j++) {
-            long long w = adj[v].edges[j].dst_index;
+            AdjEdge w_edge = adj[v].edges[j];
+            long long w = w_edge.dst_index;
+            double w_time = edge_travel_time(&w_edge);
+
             if (w == -1 || w == v || w == u || ch_g->rank[w] != -1) continue;
 
-            double w_time;
-            if (adj[v].edges[j].speed_limit == 0) {
-                w_time = adj[v].edges[j].weight;
-            } else {
-                w_time = adj[v].edges[j].weight / (adj[v].edges[j].speed_limit / 3.6);
-            }
-
+            // if the new shortcutt is faster then what is already there, add the new edge to the adjacency list
             if (l_dist[w] > u_time + w_time) {
+                // get the distance to u and w
                 double u_dist = adj_r[v].edges[i].km_weight;
                 double w_dist = adj[v].edges[j].km_weight;
+
+                // add the new shortcut edge to the adjacency list
                 adjlist_add_edge(&adj[u], w, u_time + w_time, u_dist + w_dist, 0);
                 adjlist_add_edge(&adj_r[w], u, u_time + w_time, u_dist + w_dist, 0);
             }
@@ -231,6 +236,7 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
     touched = malloc(g->node_count * sizeof(long long));
     if (!touched) goto cleanup;
 
+    // set variables to default
     int touched_count = 0;
     for (long long i = 0; i < g->node_count; i++)
     {
@@ -241,25 +247,32 @@ CHGraph *ch_build(Graph *g, AdjList *adj, AdjList *adj_r)
 
     order_heap = createHeap(g->node_count);
 
-    // initial scoring — push onto order_heap
+    // initial scoring — push onto order_heap (lazy score)
     for (long long i = 0; i < g->node_count; i++) {
         int score = edge_difference(ch_g, adj, adj_r, i, dist, visited, hops, heap, touched, &touched_count);
         push(order_heap, (double)score, i);
     }
 
     long long rank = 0;
+
+    // run through heap
     while (order_heap->size > 0) {
         HeapNode cur = pop(order_heap);
         long long v  = cur.nodeIndex;
 
-        if (ch_g->rank[v] != -1) continue;
+        if (ch_g->rank[v] != -1) continue;  // skip if already contracted
 
+        // score the current node and push to heap
         int new_score = edge_difference(ch_g, adj, adj_r, v, dist, visited, hops, heap, touched, &touched_count);
-        if ((double)new_score > cur.dist) {
+
+        // if the score is worse then the lazy score then push it back to the heap with its new score
+        if ((double)new_score > cur.dist)
+        {
             push(order_heap, (double)new_score, v);
             continue;
         }
 
+        // if the score is still good or better then contract it
         ch_contract_node(adj, adj_r, ch_g, v, rank, dist, visited, hops, heap, touched, &touched_count);
         rank++;
     }
@@ -443,13 +456,7 @@ ResultPath *ch_query(Graph *g, CHGraph *ch_g, AdjList *adj, AdjList *adj_r, Hash
             if (visited_c[v] == 1) continue;
 
             // calculate alternative distance = dist[u] + edge weight
-            double time;
-            if (neighbors->edges[i].speed_limit == 0) {
-                time = neighbors->edges[i].weight;
-            } else {
-                double speed_ms = neighbors->edges[i].speed_limit / 3.6;
-                time = neighbors->edges[i].weight / speed_ms;
-            }
+            double time = edge_travel_time(&neighbors->edges[i]);
             double alt = dist_c[u] + time;
 
             // if alternative < dist[v]:

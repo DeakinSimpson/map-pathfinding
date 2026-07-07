@@ -302,8 +302,6 @@ ResultPath* astar_bidir(Graph *g, AdjList *adj, AdjList *adj_r, HashMap *map, lo
             
             /*
             updated this to compare the actual distance rather then the theoretical 
-
-            this is because it was checking 
             */
             if (dist_f[u] + dist_r[u] >= best_cost) {
                 break;

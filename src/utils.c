@@ -12,10 +12,12 @@ Place PLACES[] = {
     {"Vicenza", {45.54745520724044, 11.547651470387395}},
     {"Rome", {41.89107596300499, 12.492670206083258}},
     {"malta-east", {35.86126395007788, 14.571882644990628}},
-    {"malta-west", {35.958249006888245, 14.365918959624256}}
+    {"malta-west", {35.958249006888245, 14.365918959624256}},
+    {"Traralgon", {-38.195017105603625, 146.53809419732184}},
+    {"Melbourne", {-37.81746326177289, 144.9674458085295}}
 };
 
-int PLACES_COUNT = 5;
+int PLACES_COUNT = 7;
 
 void utils_parse_arg(Coordinate *src_coord, Coordinate *dst_coord, char *argv[]) {
     src_coord->lat = atof(argv[3]);
