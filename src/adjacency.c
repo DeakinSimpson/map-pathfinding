@@ -4,10 +4,24 @@
 #include <float.h>
 #include <time.h>
 
+/*
+generate an empty adjacency list, this is used so the cached contraction hierachies can be generated
+*/
+AdjList* adjlist_create_empty(long long node_count) {
+    AdjList *adj = calloc(node_count, sizeof(AdjList));
+
+    if (adj == NULL)
+    {
+        printf("Failed to allocate memory for adj\n");
+    }
+
+    return adj;
+}
+
 AdjList* adjlist_create(Graph *g, HashMap *map, int reverse) {
     // allocate an adjacency list per node
-    AdjList *adj = calloc(g->node_count, sizeof(AdjList));
-    if (!adj) {adjlist_free(adj, g->node_count); return NULL;}
+    AdjList *adj = adjlist_create_empty(g->node_count);
+    if (adj == NULL) return NULL;
 
     for (long long i = 0; i < g->edge_count; i++) {
         Edge *e = &g->edges[i];
